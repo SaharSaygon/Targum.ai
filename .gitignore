@@ -1,0 +1,17 @@
+# Secrets & credentials — NEVER commit these
+.env
+credentials.json
+token.json
+
+# Python bytecode cache — auto-generated, not source code
+__pycache__/
+*.pyc
+
+# Virtual environment — too large, recreated via requirements.txt
+.venv/
+
+# Log files
+*.log
+
+# macOS metadata files (for when you switch to Mac)
+.DS_Store
