@@ -40,8 +40,8 @@ If the source type is unclear, make your best call and flag it in Translator Not
 Output Format:
 One .md file per source PDF, saved to the correct course/type folder in the Obsidian vault.
 Filename: source base name + _EN.md (e.g., lecture_03.pdf → lecture_03_EN.md). Preserve Hebrew in filenames if present.
-
-Start with YAML frontmatter:
+the response must begin directly with the YAML frontmatter — no preamble, no commentary, no acknowledgment.
+YAML frontmatter:
 
 ```yaml
 title: <inferred subject>
@@ -50,9 +50,11 @@ source_type: <lecture | tutorial | homework | exam | slides>
 lecture_number: <if visible>
 lecture_date: <if visible>
 source_file: <original filename>
-date_translated: <today>
+date_translated: today's actual date in YYYY-MM-DD format. Omit the field rather than guessing.
 topics: [3-8 key topics]
 ```
+When the filename and document header give conflicting metadata (lecture number, date, etc.), trust the filename. Record the filename's value in frontmatter and note the discrepancy in Translator Notes.
+
 
 After frontmatter, H1 with the title.
 
@@ -96,3 +98,4 @@ Do Not:
 - Translate into any language other than English.
 - Change the filename convention.
 - Write to courses.json or subfolder mappings without explicit user approval via ask_user.
+- Produce only final output. No intermediate versions, "let me redo this" passes, or work-in-progress tables.
