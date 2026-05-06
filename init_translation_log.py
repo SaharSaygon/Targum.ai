@@ -1,6 +1,19 @@
 """
-Bootstrap script — one-time use. Pairs existing manual translations with
-Drive PDFs and creates translated_log.json.
+init_translation_log.py — one-time interactive setup for translated_log.json.
+
+Walks the Google Drive source folder, downloads each PDF to hash it, then
+prompts you to pair it with an existing Obsidian .md file or mark it as
+not-yet-translated / permanently skipped. Safe to re-run: already-logged
+Drive file IDs are skipped automatically.
+
+Usage:
+    python init_translation_log.py
+    python init_translation_log.py --course "Design of Algorithms"
+
+Requires:
+    .env             OBSIDIAN_VAULT_PATH, DRIVE_SOURCE_FOLDER_ID
+    credentials.json Google OAuth client secrets
+    courses.json     Hebrew folder name → English course name mapping
 
 Agent contract: entries with model='skipped_permanent' must NEVER be
 re-translated or re-prompted by the agent. To un-skip, manually delete
@@ -48,6 +61,7 @@ TYPE_KEYWORDS = {
 # ── Drive auth ────────────────────────────────────────────────────────────────
 
 def get_drive_credentials() -> Credentials:
+    """Load credentials from token.json, refreshing or re-running OAuth as needed."""
     creds = None
     token_path = PROJECT_ROOT / "token.json"
     if token_path.exists():
@@ -343,6 +357,7 @@ def rewrite_md(
     file_type: str,
     today_date: str,
 ) -> None:
+    """Inject Drive metadata into the .md frontmatter, preserving any existing fields."""
     abs_path = vault_path / rel_path
     text = abs_path.read_text(encoding="utf-8")
     existing_fm, body = parse_frontmatter(text)
@@ -366,7 +381,7 @@ def rewrite_md(
 def print_summary(total: int, counts: dict, skipped_permanently: list[tuple]) -> None:
     print()
     print("=" * 52)
-    print("Bootstrap complete.")
+    print("Initialization complete.")
     print(f"  Total Drive files:              {total}")
     print(f"  Paired with manual translation: {counts['paired']}")
     print(f"  Marked not-yet-translated:      {counts['not_yet']}")
@@ -381,7 +396,7 @@ def print_summary(total: int, counts: dict, skipped_permanently: list[tuple]) ->
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Bootstrap translated_log.json")
+    parser = argparse.ArgumentParser(description="Initialise translated_log.json interactively")
     parser.add_argument(
         "--course",
         metavar="NAME",
