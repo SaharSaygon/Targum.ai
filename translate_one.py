@@ -3,11 +3,13 @@ translate_one.py — linear proof-of-concept for single-file translation.
 Not an agent. Fill in DRIVE_FILE_ID and COURSE_HEBREW before running.
 """
 
+import hashlib
 import io
 import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import anthropic
@@ -20,11 +22,22 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 # ── Fill these in ─────────────────────────────────────────────────────────────
-DRIVE_FILE_ID = "1UKRi46WMrXGJyWaJPcUhC-gOnBiSXo8b"
-COURSE_HEBREW = "תכנון אלגוריתמים"
+DRIVE_FILE_ID = "1wk12FJdY_-fYd4QtvAA-AbOiXyGhXvEO"
+COURSE_HEBREW = "פונקציות מרוכבות"
 
 PROJECT_ROOT = Path(__file__).parent
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+MODEL = "claude-opus-4-7"
+
+# USD per million tokens — update if Anthropic changes rates
+_PRICE_PER_M = {"input": 5.00, "output": 25.00}
+
+_TYPE_KEYWORDS = [
+    (["הרצאה", "lecture", "lec"], "lecture"),
+    (["תרגול", "tutorial", "tirgul"], "tutorial"),
+    (["עבודה", "תרגיל", "homework", "hw"], "homework"),
+    (["בוחן", "exam", "moed"], "exam"),
+]
 
 
 # ── Drive auth ────────────────────────────────────────────────────────────────
@@ -54,6 +67,36 @@ def download_bytes(service, file_id: str) -> bytes:
     while not done:
         _, done = downloader.next_chunk()
     return buf.getvalue()
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def sha256_of(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def infer_type(filename: str):
+    lower = filename.lower()
+    for keywords, type_val in _TYPE_KEYWORDS:
+        if any(k in lower for k in keywords):
+            return type_val
+    return None
+
+
+def load_log() -> list:
+    log_path = PROJECT_ROOT / "translated_log.json"
+    if log_path.exists():
+        with open(log_path, encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def save_log(entries: list) -> None:
+    log_path = PROJECT_ROOT / "translated_log.json"
+    tmp = log_path.with_suffix(".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, log_path)
 
 
 # ── Text quality check ────────────────────────────────────────────────────────
@@ -118,10 +161,10 @@ def main() -> None:
     # No need to pass the key explicitly — load_dotenv() already put it in os.environ.
     client = anthropic.Anthropic()
 
-    print("Calling Claude Opus 4.7 for translation (this may take a minute)...")
+    print(f"Calling {MODEL} for translation (this may take a minute)...")
     try:
         response = client.messages.create(
-            model="claude-opus-4-7",
+            model=MODEL,
             max_tokens=16000,
             system=system_prompt,
             messages=[
@@ -159,6 +202,26 @@ def main() -> None:
         sys.exit(1)
 
     print(f"Saved → {out_path}")
+
+    # Step 8 — append to translated_log.json
+    cost_usd = (usage.input_tokens * _PRICE_PER_M["input"] + usage.output_tokens * _PRICE_PER_M["output"]) / 1_000_000
+    log = load_log()
+    log = [e for e in log if e["drive_file_id"] != DRIVE_FILE_ID]
+    log.append({
+        "drive_file_id": DRIVE_FILE_ID,
+        "drive_file_name": original_filename,
+        "source_content_hash": sha256_of(pdf_bytes),
+        "md_path": str(out_path.relative_to(vault_path)),
+        "course": course_en,
+        "type": infer_type(original_filename),
+        "translated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "model": MODEL,
+        "cost_usd": round(cost_usd, 6),
+        "input_tokens": usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+    })
+    save_log(log)
+    print("Log updated → translated_log.json")
 
 
 if __name__ == "__main__":

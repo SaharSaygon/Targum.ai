@@ -431,6 +431,19 @@
     "output_tokens": 0
   },
   {
+    "drive_file_id": "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNjuP",
+    "drive_file_name": "מערכות ליניאריות הרצאה 4 - 5.5.pdf",
+    "source_content_hash": "sha256:875510c27dcfee889f45b4c556faa5174878004c2154daa26a70426e245f5e50",
+    "md_path": "Introduction to Linear Systems/מערכות ליניאריות הרצאה 4 - 5.5_EN.md",
+    "course": "Introduction to Linear Systems",
+    "type": "lecture",
+    "translated_at": "2026-05-06T18:02:46Z",
+    "model": "claude-opus-4-7",
+    "cost_usd": 0.293005,
+    "input_tokens": 11176,
+    "output_tokens": 9485
+  },
+  {
     "drive_file_id": "1JG5K6NxFdi3a8s9ZTdSXAmwc7rrtkZ36",
     "drive_file_name": "מערכות ליניאריות תרגול 4 - 23.4.pdf",
     "source_content_hash": "sha256:9e4175ef495116a75030e735bc3dce93fb2546c0a85b1b3c4eebed5c4897f944",
