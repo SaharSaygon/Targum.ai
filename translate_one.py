@@ -22,8 +22,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
 # ── Fill these in ─────────────────────────────────────────────────────────────
-DRIVE_FILE_ID = "1wk12FJdY_-fYd4QtvAA-AbOiXyGhXvEO"
-COURSE_HEBREW = "פונקציות מרוכבות"
+DRIVE_FILE_ID = "1Zn4UPU2eU34frv3j_QHKtAigr3_4dR4T"
+COURSE_HEBREW = "תכנון אלגוריתמים"
 
 PROJECT_ROOT = Path(__file__).parent
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]

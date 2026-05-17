@@ -431,19 +431,6 @@
     "output_tokens": 0
   },
   {
-    "drive_file_id": "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNjuP",
-    "drive_file_name": "מערכות ליניאריות הרצאה 4 - 5.5.pdf",
-    "source_content_hash": "sha256:875510c27dcfee889f45b4c556faa5174878004c2154daa26a70426e245f5e50",
-    "md_path": "Introduction to Linear Systems/מערכות ליניאריות הרצאה 4 - 5.5_EN.md",
-    "course": "Introduction to Linear Systems",
-    "type": "lecture",
-    "translated_at": "2026-05-06T18:02:46Z",
-    "model": "claude-opus-4-7",
-    "cost_usd": 0.293005,
-    "input_tokens": 11176,
-    "output_tokens": 9485
-  },
-  {
     "drive_file_id": "1JG5K6NxFdi3a8s9ZTdSXAmwc7rrtkZ36",
     "drive_file_name": "מערכות ליניאריות תרגול 4 - 23.4.pdf",
     "source_content_hash": "sha256:9e4175ef495116a75030e735bc3dce93fb2546c0a85b1b3c4eebed5c4897f944",
@@ -637,5 +624,31 @@
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0
+  },
+  {
+    "drive_file_id": "1wk12FJdY_-fYd4QtvAA-AbOiXyGhXvEO",
+    "drive_file_name": "מרוכבות תרגול 3 (לירן) - 14.4.pdf",
+    "source_content_hash": "sha256:949c25861b2bd8a744546e384fa8f90613a23210c802fcc3e44d808bafbff286",
+    "md_path": "Complex Functions/מרוכבות תרגול 3 (לירן) - 14.4_EN.md",
+    "course": "Complex Functions",
+    "type": "tutorial",
+    "translated_at": "2026-05-06T19:05:49Z",
+    "model": "claude-opus-4-7",
+    "cost_usd": 0.11158,
+    "input_tokens": 4611,
+    "output_tokens": 3541
+  },
+  {
+    "drive_file_id": "1Zn4UPU2eU34frv3j_QHKtAigr3_4dR4T",
+    "drive_file_name": "Lecture13_dacccbf8acd3116708e1f5f6a1539729.pdf",
+    "source_content_hash": "sha256:7c599eefb6c84b65bfdbf7b1d16ff6eea3f50ebd53e9ebad29dbd16e5aafb79a",
+    "md_path": "Design of Algorithms/Lecture13_dacccbf8acd3116708e1f5f6a1539729_EN.md",
+    "course": "Design of Algorithms",
+    "type": "lecture",
+    "translated_at": "2026-05-17T22:22:46Z",
+    "model": "claude-opus-4-7",
+    "cost_usd": 0.25712,
+    "input_tokens": 12959,
+    "output_tokens": 7693
   }
 ]
