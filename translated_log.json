@@ -95,15 +95,20 @@
   {
     "drive_file_id": "1UKRi46WMrXGJyWaJPcUhC-gOnBiSXo8b",
     "drive_file_name": "Lecture08_4d62766c8a3d1ff1806407a2b361f6d1.pdf",
-    "source_content_hash": "sha256:10eca32b01002f574f36b69035ce30308bf8064ec11d79d1400aa3b8b583950f",
-    "md_path": null,
-    "course": null,
-    "type": null,
-    "translated_at": null,
-    "model": "not_translated_yet",
-    "cost_usd": 0,
-    "input_tokens": 0,
-    "output_tokens": 0
+    "source_content_hash": "sha256:c2cc3ec54b7808484ff34fa0bfe5cabb6c8c95571606c8298c6c7a47f281a0d4",
+    "md_path": "Design of Algorithms/Lectures/Lecture08_4d62766c8a3d1ff1806407a2b361f6d1_EN.md",
+    "course": "Design of Algorithms",
+    "type": "lecture",
+    "translated_at": "2026-05-18T10:34:49Z",
+    "model": "claude-opus-4-7",
+    "cost_usd": 0.608805,
+    "input_tokens": 9682,
+    "output_tokens": 6181,
+    "detection_mode": "text",
+    "recognizability": 0.8917,
+    "max_garbage_run": 5,
+    "total_tokens": 1053,
+    "detection_reason": "text: 89% recognizable, max garbage run 5"
   },
   {
     "drive_file_id": "1nMFbJ8TIC5rPUt33IrKmtyw5cyT7ZmmM",
@@ -650,5 +655,23 @@
     "cost_usd": 0.25712,
     "input_tokens": 12959,
     "output_tokens": 7693
+  },
+  {
+    "drive_file_id": "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNjuP",
+    "drive_file_name": "מערכות ליניאריות הרצאה 4 - 5.5.pdf",
+    "source_content_hash": "sha256:875510c27dcfee889f45b4c556faa5174878004c2154daa26a70426e245f5e50",
+    "md_path": "Introduction to Linear Systems/Lectures/מערכות ליניאריות הרצאה 4 - 5.5_EN.md",
+    "course": "Introduction to Linear Systems",
+    "type": "lecture",
+    "translated_at": "2026-05-18T10:30:55Z",
+    "model": "claude-opus-4-7",
+    "cost_usd": 1.51938,
+    "input_tokens": 51462,
+    "output_tokens": 9966,
+    "detection_mode": "image",
+    "recognizability": 0.7965,
+    "max_garbage_run": 6,
+    "total_tokens": 978,
+    "detection_reason": "image: 80% recognizable, below 85% threshold"
   }
 ]

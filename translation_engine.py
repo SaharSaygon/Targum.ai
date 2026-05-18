@@ -1,0 +1,239 @@
+"""
+translation_engine.py — core translation logic shared by all entry points.
+
+Both public functions have the same signature and return the same dict shape:
+    {markdown, input_tokens, output_tokens, cost_usd, model, mode}
+
+today_date (YYYY-MM-DD) is injected into every user message so Claude can
+write an accurate date_translated frontmatter field without fabricating it.
+"""
+
+import base64
+import hashlib
+import io
+from pathlib import Path
+
+import anthropic
+import pypdf
+from pdf2image import convert_from_bytes
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+MODEL = "claude-opus-4-7"
+
+# 200 DPI is the sweet spot for handwritten Hebrew:
+# - Low enough that a 10-page scan fits in Claude's context window
+# - High enough that cursive Hebrew letters are distinguishable
+# At 300 DPI the image data is 2.25× larger → 2.25× more vision tokens → 2.25× cost
+DPI = 200
+
+# Path(__file__) is the absolute path of *this file* on disk.
+# .parent strips the filename, leaving just the directory it lives in.
+# This means "find translation_system_prompt_agent.txt next to me",
+# regardless of which directory the user runs the script from.
+_PROJECT_ROOT = Path(__file__).parent
+
+# Load the system prompt once when the module is first imported,
+# not on every API call. The file rarely changes; no point re-reading it.
+_SYSTEM_PROMPT = (
+    _PROJECT_ROOT / "translation_system_prompt_agent.txt"
+).read_text(encoding="utf-8")
+
+# Used by the thin wrappers (translate_one.py, translate_image_pdf.py)
+# to classify files by name into lecture / tutorial / homework / exam.
+# Each tuple is: ([Hebrew and English keywords to look for], type_string)
+_TYPE_KEYWORDS = [
+    (["הרצאה", "lecture", "lec"], "lecture"),
+    (["תרגול", "tutorial", "tirgul"], "tutorial"),
+    (["עבודה", "תרגיל", "homework", "hw"], "homework"),
+    (["בוחן", "exam", "moed"], "exam"),
+]
+
+# ── Shared helpers ─────────────────────────────────────────────────────────────
+
+def sha256_of(data: bytes) -> str:
+    # We hash the raw PDF bytes (not the filename) so if the same file is
+    # re-uploaded to Drive with a new name or ID, we still detect the duplicate.
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def infer_type(filename: str) -> str | None:
+    # lower() so we match "Lecture", "LECTURE", "הרצאה" case-insensitively.
+    # any() short-circuits: stops checking keywords as soon as one matches.
+    lower = filename.lower()
+    for keywords, type_val in _TYPE_KEYWORDS:
+        if any(k in lower for k in keywords):
+            return type_val
+    return None  # caller decides what to do when type can't be inferred
+
+
+def _pil_to_base64_png(image) -> str:
+    # Claude's API requires images as base64-encoded strings, not raw bytes.
+    # Steps:
+    # 1. image.save(buf, "PNG") — encode the PIL image into PNG bytes, write to buf
+    # 2. buf.getvalue()         — pull the raw PNG bytes out of the buffer
+    # 3. base64.b64encode()     — convert bytes → base64 bytes (still bytes, not str)
+    # 4. .decode("utf-8")       — convert base64 bytes → str (what JSON needs)
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+# ── Cost calculation ───────────────────────────────────────────────────────────
+# Identical formula for both text and image mode — no separate image-token
+# accounting. Claude Opus 4.7 rates: $15/M input tokens, $75/M output tokens.
+# Vision input tokens are priced the same as text input tokens; Anthropic
+# converts images to tokens internally (~1600 tokens per 512×512 tile).
+
+def _calc_cost(usage) -> float:
+    return (usage.input_tokens * 15 + usage.output_tokens * 75) / 1_000_000
+
+
+# ── Translation functions ──────────────────────────────────────────────────────
+
+def translate_text_pdf(
+    pdf_bytes: bytes,
+    course_english: str,
+    drive_file_id: str,
+    drive_filename: str,
+    source_hash: str,
+    today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+) -> dict:
+    """
+    Extract text with pypdf, translate via Claude text API.
+    Raises RuntimeError if extraction yields nothing usable.
+    """
+    # PdfReader needs a file-like object, not raw bytes.
+    # io.BytesIO wraps the bytes in a seekable in-memory "file"
+    # so pypdf can read it without touching the filesystem.
+    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+
+    # Extract text from every page, join with blank lines between pages,
+    # then strip leading/trailing whitespace from the whole block.
+    # extract_text() returns None for image-only pages, so `or ""` avoids a crash.
+    extracted = "\n\n".join(
+        page.extract_text() or "" for page in reader.pages
+    ).strip()
+
+    # 50 chars is a conservative floor. A PDF with only a title would pass;
+    # a blank or image-only PDF (where pypdf returned nothing) would fail.
+    # The caller (translate_smart.py) already ran pdf_mode_detector, so this
+    # is a last-resort guard rather than the primary routing decision.
+    if len(extracted) < 50:
+        raise RuntimeError(
+            f"Text extraction returned only {len(extracted)} chars — "
+            "run in image mode instead"
+        )
+
+    # anthropic.Anthropic() reads ANTHROPIC_API_KEY from os.environ automatically.
+    # The caller must have run load_dotenv() before calling this function.
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=16000,
+        system=_SYSTEM_PROMPT,
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    # today_date goes first so it appears before the content,
+                    # making it impossible for the model to miss or ignore it.
+                    f"Today's date is {today_date}. "
+                    "Translate the following Hebrew lecture per the system prompt.\n\n"
+                    f"Course: {course_english}\n"
+                    f"Source file: {drive_filename}\n\n"
+                    f"{extracted}"
+                ),
+            }
+        ],
+    )
+
+    usage = response.usage
+    return {
+        "markdown":      response.content[0].text,  # [0] because Claude always returns at least one TextBlock
+        "input_tokens":  usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "cost_usd":      round(_calc_cost(usage), 6),
+        "model":         MODEL,
+        "mode":          "text",
+    }
+
+
+def translate_image_pdf(
+    pdf_bytes: bytes,
+    course_english: str,
+    drive_file_id: str,
+    drive_filename: str,
+    source_hash: str,
+    today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+) -> dict:
+    """
+    Rasterise PDF pages at DPI, translate via Claude vision API.
+    """
+    # convert_from_bytes returns a list of PIL Image objects — one per page.
+    # All pages are decoded into memory at once. A 10-page scan at 200 DPI
+    # can be ~110 MB of raw pixel data before PNG encoding. If you hit
+    # MemoryError, lower DPI to 150.
+    images = convert_from_bytes(pdf_bytes, dpi=DPI)
+    print(f"  Rasterised {len(images)} page(s) at {DPI} DPI.")
+
+    # The Anthropic API accepts a "content array" — a list of blocks where each
+    # block is either {"type": "text", "text": "..."} or
+    # {"type": "image", "source": {...}}.
+    # We put the instruction text block FIRST so Claude reads the date and
+    # course context before processing the images.
+    content: list[dict] = [
+        {
+            "type": "text",
+            "text": (
+                f"Today's date is {today_date}. "
+                "Translate the following Hebrew lecture per the system prompt.\n\n"
+                # The system prompt was written for text-mode and says
+                # "mark missing figures as not_included". That default is wrong here
+                # because Claude can actually see the figures. This overrides it.
+                f"Source mode: vision (page images at {DPI} DPI). "
+                "Describe figures, diagrams, and handwritten content directly "
+                "from what you see. Do not mark figures as not_included — "
+                "you can see them.\n\n"
+                f"Course: {course_english}\n"
+                f"Source file: {drive_filename}"
+            ),
+        }
+    ]
+
+    # Append one image block per page, after the instruction text.
+    for i, img in enumerate(images):
+        print(f"  Encoding page {i + 1}/{len(images)}...", end="\r", flush=True)
+        content.append(
+            {
+                "type": "image",
+                "source": {
+                    # "base64" tells Claude to decode the data field from base64
+                    # before processing. The alternative is "url" for a public
+                    # image URL — we can't use that because our images only exist
+                    # in memory and are never uploaded to the web.
+                    "type":       "base64",
+                    "media_type": "image/png",
+                    "data":       _pil_to_base64_png(img),
+                },
+            }
+        )
+    print()  # the \r above overwrites the same terminal line; this moves past it
+
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=16000,
+        system=_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": content}],
+    )
+
+    usage = response.usage
+    return {
+        "markdown":      response.content[0].text,
+        "input_tokens":  usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "cost_usd":      round(_calc_cost(usage), 6),
+        "model":         MODEL,
+        "mode":          "image",
+    }

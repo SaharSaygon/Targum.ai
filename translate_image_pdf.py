@@ -1,5 +1,5 @@
 """
-translate_one.py — thin wrapper for manual single-file text-mode translation.
+translate_image_pdf.py — thin wrapper for manual single-file image-mode translation.
 Fill in DRIVE_FILE_ID and COURSE_HEBREW, then run directly.
 All translation logic lives in translation_engine.py.
 """
@@ -18,10 +18,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-from translation_engine import infer_type, sha256_of, translate_text_pdf
+from translation_engine import infer_type, sha256_of, translate_image_pdf
 
 # ── Fill these in ─────────────────────────────────────────────────────────────
-DRIVE_FILE_ID = "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNju"
+DRIVE_FILE_ID = "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNjuP"
 COURSE_HEBREW = "מבוא למערכות לינאריות"
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -94,16 +94,24 @@ def main() -> None:
     pdf_bytes = download_bytes(service, DRIVE_FILE_ID)
     print(f"{len(pdf_bytes):,} bytes.")
 
+    # Hash-based dedup: skip if this exact content was already translated.
     source_hash = sha256_of(pdf_bytes)
+    log = load_log()
+    for entry in log:
+        if entry.get("source_content_hash") == source_hash:
+            if entry.get("md_path") is not None or entry.get("model") == "skipped_permanent":
+                print(f"Already done: {entry.get('md_path') or entry.get('skip_reason')}")
+                sys.exit(0)
+
     today_date = datetime.date.today().isoformat()
 
-    print(f"Calling translation engine (text mode)...")
+    print(f"Calling translation engine (image mode)...")
     try:
-        result = translate_text_pdf(
+        result = translate_image_pdf(
             pdf_bytes, course_english, DRIVE_FILE_ID,
             drive_filename, source_hash, today_date,
         )
-    except (RuntimeError, Exception) as e:
+    except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
 
@@ -114,8 +122,6 @@ def main() -> None:
     out_path.write_text(result["markdown"], encoding="utf-8")
     print(f"Saved → {out_path}")
 
-    log = load_log()
-    # Remove any prior entry for this Drive file, then append the new one.
     log = [e for e in log if e.get("drive_file_id") != DRIVE_FILE_ID]
     log.append({
         "drive_file_id":       DRIVE_FILE_ID,
