@@ -29,14 +29,24 @@ DPI = 200
 
 # Path(__file__) is the absolute path of *this file* on disk.
 # .parent strips the filename, leaving just the directory it lives in.
-# This means "find translation_system_prompt_agent.txt next to me",
-# regardless of which directory the user runs the script from.
+# This means "find the prompt files next to me", regardless of which
+# directory the user runs the script from.
 _PROJECT_ROOT = Path(__file__).parent
 
-# Load the system prompt once when the module is first imported,
-# not on every API call. The file rarely changes; no point re-reading it.
-_SYSTEM_PROMPT = (
-    _PROJECT_ROOT / "translation_system_prompt_agent.txt"
+# Load the system prompts once when the module is first imported,
+# not on every API call. The files rarely change; no point re-reading them.
+#
+# The original combined prompt was split in two:
+#   - skills/translate-shared.md — single-file translation logic, injected by
+#     translate_text_pdf / translate_image_pdf below.
+#   - agent_routing_prompt.md    — routing/traversal logic for the agent loop;
+#     loaded here ready for when that loop is built, not wired in yet.
+_TRANSLATION_PROMPT = (
+    _PROJECT_ROOT / "skills" / "translate-shared.md"
+).read_text(encoding="utf-8")
+
+_ROUTING_PROMPT = (
+    _PROJECT_ROOT / "agent_routing_prompt.md"
 ).read_text(encoding="utf-8")
 
 # Used by the thin wrappers (translate_one.py, translate_image_pdf.py)
@@ -48,6 +58,20 @@ _TYPE_KEYWORDS = [
     (["עבודה", "תרגיל", "homework", "hw"], "homework"),
     (["בוחן", "exam", "moed"], "exam"),
 ]
+
+# Maps the semantic type value to the subfolder name inside the course folder:
+# "lecture" → <vault>/<course>/Lectures/<file>_EN.md, etc. "reference" maps to
+# "" and lands directly in the course root.
+# Moved here from a retired single-file dispatch script — it was the only entry
+# point that routed output into type-based subfolders; vault_output_path() below
+# is the reusable form for the agent loop and any future entry point.
+TYPE_TO_FOLDER = {
+    "lecture":   "Lectures",
+    "tutorial":  "Tutorials",
+    "homework":  "Homework",
+    "exam":      "Exams",
+    "reference": "",   # saved directly in the course root folder
+}
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -65,6 +89,35 @@ def infer_type(filename: str) -> str | None:
         if any(k in lower for k in keywords):
             return type_val
     return None  # caller decides what to do when type can't be inferred
+
+
+def vault_output_path(
+    vault_path: Path,
+    course_english: str,
+    type_value: str,
+    drive_filename: str,
+) -> Path:
+    """Build the Obsidian output path for a translated file:
+
+        <vault>/<course>/<type-subfolder>/<stem>_EN.md
+
+    The subfolder comes from TYPE_TO_FOLDER (lecture → Lectures, …); the
+    "reference" type maps to "" and lands directly in the course root.
+    Path.stem strips the extension: "הרצאה 4.pdf" → "הרצאה 4".
+
+    Pure path construction — does not touch the filesystem; the caller creates
+    parent dirs and writes. Moved here from the retired single-file dispatch
+    script, the only place that did type-based subfoldering.
+    """
+    if type_value not in TYPE_TO_FOLDER:
+        raise ValueError(
+            f"unknown type {type_value!r}; expected one of {list(TYPE_TO_FOLDER)}"
+        )
+    stem = Path(drive_filename).stem
+    subfolder = TYPE_TO_FOLDER[type_value]
+    if subfolder:
+        return vault_path / course_english / subfolder / f"{stem}_EN.md"
+    return vault_path / course_english / f"{stem}_EN.md"
 
 
 def _pil_to_base64_png(image) -> str:
@@ -117,8 +170,8 @@ def translate_text_pdf(
 
     # 50 chars is a conservative floor. A PDF with only a title would pass;
     # a blank or image-only PDF (where pypdf returned nothing) would fail.
-    # The caller (translate_smart.py) already ran pdf_mode_detector, so this
-    # is a last-resort guard rather than the primary routing decision.
+    # The caller already routed via pdf_mode_detector signals, so this is a
+    # last-resort guard rather than the primary routing decision.
     if len(extracted) < 50:
         raise RuntimeError(
             f"Text extraction returned only {len(extracted)} chars — "
@@ -131,7 +184,7 @@ def translate_text_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_SYSTEM_PROMPT,
+        system=_TRANSLATION_PROMPT,
         messages=[
             {
                 "role": "user",
@@ -224,7 +277,7 @@ def translate_image_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_SYSTEM_PROMPT,
+        system=_TRANSLATION_PROMPT,
         messages=[{"role": "user", "content": content}],
     )
 

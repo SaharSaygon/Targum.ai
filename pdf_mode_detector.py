@@ -1,8 +1,12 @@
 """
-Heuristic classifier: should this PDF be processed as extracted text or as images?
+Extraction-signal reporter for PDFs: how well did pypdf read this file, and what
+does the unread remainder look like?
 
-Biases hard toward "image" — text-mode on handwritten content silently fabricates;
-image-mode on typed content just costs more tokens.
+This module NO LONGER returns a text/image verdict. It reports raw signals and
+the routing agent owns the decision (see agent_routing_prompt.md "Mode
+Selection"). The bias toward image on ambiguity lives in the agent's rubric, not
+here — keeping the detector a pure, side-effect-free measurement function makes
+its output auditable and the decision logic inspectable in one place.
 """
 
 import io
@@ -15,6 +19,36 @@ _MATH_ITALIC_CHAR_RE = re.compile(r"^[\U0001D400-\U0001D7FF]+$")
 _LATIN_WORD_RE = re.compile(r"^[A-Za-z]{2,}$")
 _NUMBER_RE = re.compile(r"^[0-9]+([.,][0-9]+)?$")
 
+# ---------------------------------------------------------------------------
+# Heuristic thresholds — RETAINED FOR REFERENCE / MONITORING ONLY.
+# These were the old verdict cutoffs. They are intentionally NOT applied
+# anywhere below: the detector emits raw signals and the routing agent decides.
+# Kept so historical reasoning and threshold-retuning analysis stay grounded.
+# ---------------------------------------------------------------------------
+_RECOGNIZABILITY_THRESHOLD = 0.85  # old text/image recognizability cutoff
+_MAX_GARBAGE_RUN_THRESHOLD = 20    # old garbage-run cutoff
+_MIN_TEXT_CHARS = 50               # old minimum-extracted-text cutoff
+
+
+def _is_math_token(token: str) -> bool:
+    """Math-token test.
+
+    Factored out of _is_recognizable so math_token_fraction reuses the SAME
+    logic instead of a second, divergent classifier. Covers lone math
+    operators/symbols and pure Mathematical-Italic (U+1D400–U+1D7FF) runs.
+
+    NOTE: fused digit-and-operator clusters (e.g. "𝑎2+𝜔2", "ℱ{𝑓(𝑡−𝑡0)}=…") are
+    deliberately NOT counted here — counting them would also flip them to
+    "recognizable" and break recognizability parity. They instead fall through
+    to unrecognized_sample, which is exactly the "fragmented math" signal the
+    routing rubric reads.
+    """
+    if len(token) == 1 and token in MATH_SYMBOLS:
+        return True
+    if _MATH_ITALIC_CHAR_RE.match(token):
+        return True
+    return False
+
 
 def _is_recognizable(token: str) -> bool:
     if _HEBREW_RE.search(token):
@@ -23,40 +57,44 @@ def _is_recognizable(token: str) -> bool:
         return True
     if _NUMBER_RE.match(token):
         return True
-    if len(token) == 1 and token in MATH_SYMBOLS:
-        return True
-    if _MATH_ITALIC_CHAR_RE.match(token):
+    if _is_math_token(token):
         return True
     return False
 
 
 def _analyze_text(text: str) -> dict:
-    """Core logic, exposed separately so unit tests can inject text directly."""
-    if len(text) < 50:
-        return {
-            "mode": "image",
-            "recognizability": 0.0,
-            "max_garbage_run": 0,
-            "total_tokens": 0,
-            "reason": f"image: only {len(text)} chars extracted, below 50-char threshold",
-        }
+    """Doc-level extraction signals for a block of text.
 
+    Exposed separately so unit tests can inject text directly. Returns raw
+    signals only — no mode verdict. All the original math is preserved
+    (recognizability, garbage-run); we changed what's exposed, not how it's
+    computed.
+    """
     tokens = text.split()
     total = len(tokens)
 
     if total == 0:
         return {
-            "mode": "image",
             "recognizability": 0.0,
-            "max_garbage_run": 0,
+            "math_token_fraction": 0.0,
+            "unrecognized_sample": "",
+            "max_garbage_run_DIAGNOSTIC": 0,
             "total_tokens": 0,
-            "reason": "image: no tokens after splitting",
         }
 
     flags = [_is_recognizable(t) for t in tokens]
     recognized = sum(flags)
     recognizability = recognized / total
 
+    math_count = sum(_is_math_token(t) for t in tokens)
+    math_token_fraction = math_count / total
+
+    # Verbatim slice of the tokens that failed recognition. The garbage SHAPE is
+    # the signal, so this is NOT cleaned, normalized, or encoding-fixed.
+    unrecognized = [t for t, ok in zip(tokens, flags) if not ok]
+    unrecognized_sample = " ".join(unrecognized)[:300]
+
+    # Longest consecutive run of unrecognizable tokens.
     max_garbage_run = 0
     current_run = 0
     for flag in flags:
@@ -67,54 +105,94 @@ def _analyze_text(text: str) -> dict:
         else:
             current_run = 0
 
-    if recognizability < 0.85:
-        mode = "image"
-        reason = f"image: {recognizability:.0%} recognizable, below 85% threshold"
-    elif max_garbage_run > 20:
-        mode = "image"
-        reason = f"image: {max_garbage_run}-token garbage run detected"
-    else:
-        mode = "text"
-        reason = (
-            f"text: {recognizability:.0%} recognizable, "
-            f"max garbage run {max_garbage_run}"
-        )
-
     return {
-        "mode": mode,
         "recognizability": round(recognizability, 4),
-        "max_garbage_run": max_garbage_run,
+        "math_token_fraction": round(math_token_fraction, 4),
+        "unrecognized_sample": unrecognized_sample,
+        # RTL/math extraction-quality signal, NOT a handwriting detector — in our
+        # corpus fires only on typed RTL+math files. Do not route on this alone.
+        "max_garbage_run_DIAGNOSTIC": max_garbage_run,
         "total_tokens": total,
-        "reason": reason,
     }
 
 
 def detect_pdf_mode(pdf_bytes: bytes) -> dict:
     """
-    Classify a PDF as suitable for text extraction or image-based OCR.
+    Report raw extraction signals for a PDF. NO verdict — the routing agent
+    weighs these (see agent_routing_prompt.md "Mode Selection").
 
     Returns a dict:
-        mode            "text" | "image"
-        recognizability float  fraction of whitespace-split tokens that look real
-        max_garbage_run int    longest consecutive run of unrecognizable tokens
-        total_tokens    int
-        reason          str    human-readable explanation of the decision
+        DECISION SIGNALS
+        recognizability       float 0–1   doc-level fraction of tokens that parse
+                                           as real Hebrew/Latin/math
+        tokens_per_page       float       extraction yield (total tokens / pages)
+        bytes_per_token       float       file bytes / token; high → raster/scanned
+        math_token_fraction   float 0–1   fraction of tokens that are math
+        unrecognized_sample   str         ~300-char verbatim slice of failed tokens
+        per_page              list[dict]  {page, tokens, recognizability, math_fraction}
+
+        DIAGNOSTIC-ONLY (not verdict drivers)
+        max_garbage_run_DIAGNOSTIC  int   longest unrecognizable run
+        page_count            int
+        file_size_kb          int
     """
+    file_size_kb = len(pdf_bytes) // 1024
+
     try:
         import pypdf  # noqa: PLC0415
 
         reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-        text = "".join(page.extract_text() or "" for page in reader.pages)
-    except Exception as exc:
+        page_texts = [page.extract_text() or "" for page in reader.pages]
+    except Exception:
+        # Extraction failed → zero yield. Reported as such (very low tokens, very
+        # high bytes/token) so the agent routes to image. No verdict emitted.
         return {
-            "mode": "image",
             "recognizability": 0.0,
-            "max_garbage_run": 0,
-            "total_tokens": 0,
-            "reason": f"image: pypdf extraction failed ({exc})",
+            "tokens_per_page": 0.0,
+            "bytes_per_token": float(file_size_kb * 1024),
+            "math_token_fraction": 0.0,
+            "unrecognized_sample": "",
+            "per_page": [],
+            # RTL/math extraction-quality signal, NOT a handwriting detector — in
+            # our corpus fires only on typed RTL+math files. Do not route on this
+            # alone.
+            "max_garbage_run_DIAGNOSTIC": 0,
+            "page_count": 0,
+            "file_size_kb": file_size_kb,
         }
 
-    return _analyze_text(text)
+    page_count = len(page_texts)
+
+    # Doc-level signals use the same concatenation the detector always used.
+    doc = _analyze_text("".join(page_texts))
+    total_tokens = doc["total_tokens"]
+
+    per_page = []
+    for i, ptext in enumerate(page_texts, start=1):
+        pa = _analyze_text(ptext)
+        per_page.append({
+            "page": i,
+            "tokens": pa["total_tokens"],
+            "recognizability": pa["recognizability"],
+            "math_fraction": pa["math_token_fraction"],
+        })
+
+    tokens_per_page = total_tokens / max(page_count, 1)
+    bytes_per_token = (file_size_kb * 1024) / max(total_tokens, 1)
+
+    return {
+        "recognizability": doc["recognizability"],
+        "tokens_per_page": round(tokens_per_page, 2),
+        "bytes_per_token": round(bytes_per_token, 2),
+        "math_token_fraction": doc["math_token_fraction"],
+        "unrecognized_sample": doc["unrecognized_sample"],
+        "per_page": per_page,
+        # RTL/math extraction-quality signal, NOT a handwriting detector — in our
+        # corpus fires only on typed RTL+math files. Do not route on this alone.
+        "max_garbage_run_DIAGNOSTIC": doc["max_garbage_run_DIAGNOSTIC"],
+        "page_count": page_count,
+        "file_size_kb": file_size_kb,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -125,20 +203,32 @@ if __name__ == "__main__":
     _passed = 0
     _failed = 0
 
-    def _check(name: str, text: str, expected_mode: str) -> None:
+    def _check(
+        name: str,
+        text: str,
+        exp_recognizability: float,
+        exp_garbage_run: int,
+    ) -> None:
+        """Assert on the raw signals (recognizability + garbage-run) now that the
+        detector no longer emits a 'mode' verdict."""
         global _passed, _failed
         result = _analyze_text(text)
-        ok = result["mode"] == expected_mode
+        recog_ok = abs(result["recognizability"] - exp_recognizability) < 0.005
+        run_ok = result["max_garbage_run_DIAGNOSTIC"] == exp_garbage_run
+        ok = recog_ok and run_ok
         status = "PASS" if ok else "FAIL"
         print(f"[{status}] {name}")
-        print(f"       {result['reason']}")
         print(
             f"       tokens={result['total_tokens']}  "
             f"recognizability={result['recognizability']:.4f}  "
-            f"max_garbage_run={result['max_garbage_run']}"
+            f"math_fraction={result['math_token_fraction']:.4f}  "
+            f"max_garbage_run_DIAGNOSTIC={result['max_garbage_run_DIAGNOSTIC']}"
         )
         if not ok:
-            print(f"       expected={expected_mode!r}, got={result['mode']!r}")
+            print(
+                f"       expected recognizability≈{exp_recognizability}, "
+                f"garbage_run={exp_garbage_run}"
+            )
         print()
         if ok:
             _passed += 1
@@ -160,60 +250,69 @@ if __name__ == "__main__":
         return [_GARBAGE[i % len(_GARBAGE)] for i in range(n)]
 
     # ------------------------------------------------------------------
-    # Test 1: empty string → image
+    # Test 1: empty string → zero tokens, zero recognizability
+    # (Was: "→ image". Mode verdict removed; assert raw signals instead.)
     # ------------------------------------------------------------------
     _check(
         "empty string",
         "",
-        "image",
+        exp_recognizability=0.0,
+        exp_garbage_run=0,
     )
 
     # ------------------------------------------------------------------
-    # Test 2: 30 chars → image  (below 50-char threshold)
+    # Test 2: short all-Latin text → 100% recognizable, no garbage run
+    # (Was: "30 chars → image" via the old <50-char short-circuit. That
+    # verdict short-circuit is gone — low yield is now a routing concern via
+    # tokens_per_page — so we assert the underlying recognizability instead.)
     # ------------------------------------------------------------------
     _check(
-        "30 chars total",
-        "hello world foo bar baz",   # 23 chars, well under 50
-        "image",
+        "short all-Latin text (5 tokens, all recognizable)",
+        "hello world foo bar baz",   # 5 Latin tokens
+        exp_recognizability=1.0,
+        exp_garbage_run=0,
     )
 
     # ------------------------------------------------------------------
-    # Test 3: clean Hebrew paragraph, 100% recognizable → text
+    # Test 3: clean Hebrew paragraph, 100% recognizable
+    # (Was: "→ text".)
     # ------------------------------------------------------------------
     _check(
         "clean Hebrew paragraph (100% recognizable, no garbage runs)",
         " ".join(_heb(60)),          # ~240 chars, 60 tokens, all Hebrew
-        "text",
+        exp_recognizability=1.0,
+        exp_garbage_run=0,
     )
 
     # ------------------------------------------------------------------
-    # Test 4: 90% recognizable BUT 30-token garbage run → image (L4 case)
-    # Handwritten body hidden under a typed scaffold: high overall
-    # recognizability would pass the 85% check, but the long garbage run
-    # betrays the handwritten section.
+    # Test 4: 90% recognizable with a 30-token garbage run (L4 case)
+    # (Was: "→ image".) Assert the 90% recognizability and the 30-run that the
+    # old verdict keyed on — now reported as max_garbage_run_DIAGNOSTIC.
     # ------------------------------------------------------------------
     _tokens4 = _heb(150) + _garbage(30) + _heb(120)  # 300 tokens, 270 good
     _check(
         "90% recognizable + 30-token garbage run (L4 case)",
         " ".join(_tokens4),
-        "image",
+        exp_recognizability=0.9,
+        exp_garbage_run=30,
     )
 
     # ------------------------------------------------------------------
-    # Test 5: 70% recognizable, no long garbage run → image (below threshold)
-    # Garbage is evenly spread (max run = 3) so the garbage-run gate
-    # doesn't fire, but recognizability < 85% catches it.
+    # Test 5: 70% recognizable, garbage evenly spread (max run = 3)
+    # (Was: "→ image".)
     # ------------------------------------------------------------------
     _segment5 = _heb(7) + _garbage(3)   # 10 tokens, max_run = 3
     _tokens5 = _segment5 * 10           # 100 tokens: 70 good, 30 garbage
     _check(
         "70% recognizable, no long garbage run",
         " ".join(_tokens5),
-        "image",
+        exp_recognizability=0.7,
+        exp_garbage_run=3,
     )
 
     # ------------------------------------------------------------------
-    # Test 6: mixed Hebrew + LaTeX-style tokens, 95% recognizable → text
+    # Test 6: mixed Hebrew + LaTeX-style tokens, ~95% recognizable
+    # (Was: "→ text".) 104 tokens, 99 recognizable → 0.9519; garbage run 5.
     # ------------------------------------------------------------------
     _tokens6 = (
         _heb(60)                                          # 60 Hebrew words
@@ -221,15 +320,17 @@ if __name__ == "__main__":
         + ["=", "+", "α", "β", "γ", "42", "3.14"] * 2    # 14 math/numbers
         + _garbage(5)                                      # 5 garbage (at end, run=5)
     )
-    # Total = 104 tokens, 99 recognizable → 95.2%; max_garbage_run = 5
     _check(
         "mixed Hebrew + LaTeX, 95% recognizable",
         " ".join(_tokens6),
-        "text",
+        exp_recognizability=0.9519,
+        exp_garbage_run=5,
     )
 
     # ------------------------------------------------------------------
-    # Token-level tests for the math-italic clause
+    # Token-level tests for the math-italic clause (unchanged — these exercise
+    # _is_recognizable, whose behavior is preserved by the _is_math_token
+    # factoring).
     # ------------------------------------------------------------------
     print("--- token-level recognizability tests ---\n")
 
