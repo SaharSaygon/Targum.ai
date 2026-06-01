@@ -11,11 +11,15 @@ write an accurate date_translated frontmatter field without fabricating it.
 import base64
 import hashlib
 import io
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import anthropic
 import pypdf
 from pdf2image import convert_from_bytes
+
+import manifest
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -316,3 +320,76 @@ def translate_image_pdf(
         "model":         MODEL,
         "mode":          "image",
     }
+
+
+# ── Vault executor ──────────────────────────────────────────────────────────────
+
+def save_to_vault(
+    course_english: str,
+    type_value: str,
+    markdown: str,
+    drive_file_id: str,
+    drive_filename: str,
+    source_hash: str,
+    cost_data: dict,                 # {"model","cost_usd","input_tokens","output_tokens"}
+    chosen_mode: str,                # "text" | "image"
+    mode_reasoning: str,
+    vault_path: Path,
+    detection_signals: dict | None = None,
+    custom_subfolder: str | None = None,
+) -> dict:
+    """Write the translated .md into the vault and record it in the manifest.
+
+    Executor for a routing decision already made (course + type); it does not
+    re-decide where the file goes. No LLM call. See skills/save-to-vault.md.
+
+    Order is load-bearing: the .md is fully written and atomically renamed BEFORE
+    the manifest is touched, so a failed disk write never leaves a manifest record
+    for a file that isn't on disk. All manifest I/O is delegated to manifest.py.
+    """
+    # 1. Path — vault_output_path owns the type→folder mapping and the
+    #    custom_subfolder escape hatch. Its ValueError (unknown type with no
+    #    custom_subfolder) propagates from here, BEFORE any filesystem write —
+    #    so a bad type leaves no .md and never touches the manifest.
+    target = vault_output_path(
+        vault_path, course_english, type_value, drive_filename,
+        custom_subfolder=custom_subfolder,
+    )
+
+    # 2. Atomic .md write — temp file in the SAME directory as the target (same
+    #    filesystem, so os.replace is a true atomic rename), UTF-8. Fully written
+    #    and renamed before the manifest is touched.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_text(markdown, encoding="utf-8")
+    os.replace(tmp, target)
+
+    md_path_relative = str(target.relative_to(vault_path))
+
+    # 3. Manifest — only after the .md is safely on disk. upsert_entry matches by
+    #    drive_file_id and replaces in place (manifest.py owns that contract).
+    entry = {
+        "drive_file_id":       drive_file_id,
+        "drive_file_name":     drive_filename,
+        "source_content_hash": source_hash,
+        "md_path":             md_path_relative,
+        "course":              course_english,
+        "type":                type_value,
+        "translated_at":       datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "model":               cost_data["model"],
+        "cost_usd":            cost_data["cost_usd"],
+        "input_tokens":        cost_data["input_tokens"],
+        "output_tokens":       cost_data["output_tokens"],
+        "chosen_mode":         chosen_mode,
+        "mode_reasoning":      mode_reasoning,
+    }
+    # Detection signals are written only when present — no null keys, so an
+    # entry's lack of a signal is honest absence (e.g. manual entries never had one).
+    if detection_signals is not None:
+        entry.update(detection_signals)
+
+    entries = manifest.load_log()
+    entries = manifest.upsert_entry(entries, entry)
+    manifest.save_log(entries)
+
+    return {"status": "saved", "md_path": md_path_relative}

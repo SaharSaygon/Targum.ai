@@ -18,6 +18,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
+from manifest import load_log, save_log
 from translation_engine import infer_type, sha256_of, translate_text_pdf
 
 # ── Fill these in ─────────────────────────────────────────────────────────────
@@ -54,22 +55,6 @@ def download_bytes(service, file_id: str) -> bytes:
     while not done:
         _, done = downloader.next_chunk()
     return buf.getvalue()
-
-
-def load_log() -> list:
-    log_path = PROJECT_ROOT / "translated_log.json"
-    if log_path.exists():
-        with open(log_path, encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-
-def save_log(entries: list) -> None:
-    log_path = PROJECT_ROOT / "translated_log.json"
-    tmp = log_path.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(entries, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, log_path)
 
 
 def main() -> None:

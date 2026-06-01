@@ -40,6 +40,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
+from manifest import load_log, save_log
+
 PROJECT_ROOT = Path(__file__).parent
 LOG_PATH = PROJECT_ROOT / "translated_log.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -197,18 +199,7 @@ def atomic_write_text(path: Path, content: str) -> None:
     os.replace(tmp, path)
 
 
-def load_log() -> list[dict]:
-    if LOG_PATH.exists():
-        with open(LOG_PATH, encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
-
-def save_log(entries: list[dict]) -> None:
-    tmp = LOG_PATH.with_suffix(".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(entries, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, LOG_PATH)
+# load_log / save_log now live in manifest.py (imported above).
 
 
 # ── Type inference ────────────────────────────────────────────────────────────
