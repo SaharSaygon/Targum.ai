@@ -33,18 +33,31 @@ DPI = 200
 # directory the user runs the script from.
 _PROJECT_ROOT = Path(__file__).parent
 
-# Load the system prompts once when the module is first imported,
-# not on every API call. The files rarely change; no point re-reading them.
-#
-# The original combined prompt was split in two:
-#   - skills/translate-shared.md — single-file translation logic, injected by
-#     translate_text_pdf / translate_image_pdf below.
-#   - agent_routing_prompt.md    — routing/traversal logic for the agent loop;
-#     loaded here ready for when that loop is built, not wired in yet.
-_TRANSLATION_PROMPT = (
-    _PROJECT_ROOT / "skills" / "translate-shared.md"
-).read_text(encoding="utf-8")
+def _load_skill(name: str) -> str:
+    """Read a skill file from skills/ by name (UTF-8, _PROJECT_ROOT-relative).
 
+    Each translation tool's system prompt is translate-shared.md concatenated
+    with that tool's own mode skill — see _TEXT_SYSTEM_PROMPT / _IMAGE_SYSTEM_PROMPT.
+    """
+    return (_PROJECT_ROOT / "skills" / name).read_text(encoding="utf-8")
+
+
+# Load the skill files once when the module is first imported, not on every API
+# call. The files rarely change; no point re-reading them.
+#
+# Each tool's system prompt = the shared translation logic + that tool's mode
+# skill, concatenated shared-FIRST (the mode skill references shared by path, so
+# shared must sit above it in context).
+_TRANSLATION_PROMPT = _load_skill("translate-shared.md")   # shared base
+_TEXT_SKILL = _load_skill("translate-text-pdf.md")         # text-mode craft
+_IMAGE_SKILL = _load_skill("translate-image-pdf.md")       # image-mode craft
+
+_TEXT_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _TEXT_SKILL
+_IMAGE_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _IMAGE_SKILL
+
+# agent_routing_prompt.md — routing/traversal logic for the agent loop; loaded
+# here ready for when that loop is built, not wired into these calls. It lives at
+# the repo root (not skills/), so it keeps its own inline load.
 _ROUTING_PROMPT = (
     _PROJECT_ROOT / "agent_routing_prompt.md"
 ).read_text(encoding="utf-8")
@@ -96,25 +109,38 @@ def vault_output_path(
     course_english: str,
     type_value: str,
     drive_filename: str,
+    custom_subfolder: str | None = None,
 ) -> Path:
     """Build the Obsidian output path for a translated file:
 
         <vault>/<course>/<type-subfolder>/<stem>_EN.md
 
-    The subfolder comes from TYPE_TO_FOLDER (lecture → Lectures, …); the
-    "reference" type maps to "" and lands directly in the course root.
+    Subfolder resolution order:
+      1. type_value in TYPE_TO_FOLDER → the mapped folder (lecture → Lectures, …;
+         "reference" → "" → straight into the course root). Casing-guaranteed
+         path for the four standard types.
+      2. else if custom_subfolder is given → use it verbatim as the subfolder
+         (escape hatch for one-off categories the standard types don't cover).
+      3. else (unknown type, no custom_subfolder) → raise ValueError, so a
+         garbled type still fails loudly rather than silently dumping to root.
+
     Path.stem strips the extension: "הרצאה 4.pdf" → "הרצאה 4".
 
     Pure path construction — does not touch the filesystem; the caller creates
     parent dirs and writes. Moved here from the retired single-file dispatch
     script, the only place that did type-based subfoldering.
     """
-    if type_value not in TYPE_TO_FOLDER:
+    if type_value in TYPE_TO_FOLDER:
+        subfolder = TYPE_TO_FOLDER[type_value]
+    elif custom_subfolder is not None:
+        subfolder = custom_subfolder
+    else:
         raise ValueError(
-            f"unknown type {type_value!r}; expected one of {list(TYPE_TO_FOLDER)}"
+            f"unknown type {type_value!r}; expected one of "
+            f"{list(TYPE_TO_FOLDER)} or pass custom_subfolder="
         )
+
     stem = Path(drive_filename).stem
-    subfolder = TYPE_TO_FOLDER[type_value]
     if subfolder:
         return vault_path / course_english / subfolder / f"{stem}_EN.md"
     return vault_path / course_english / f"{stem}_EN.md"
@@ -184,7 +210,7 @@ def translate_text_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_TRANSLATION_PROMPT,
+        system=_TEXT_SYSTEM_PROMPT,   # translate-shared.md + translate-text-pdf.md
         messages=[
             {
                 "role": "user",
@@ -277,7 +303,7 @@ def translate_image_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_TRANSLATION_PROMPT,
+        system=_IMAGE_SYSTEM_PROMPT,   # translate-shared.md + translate-image-pdf.md
         messages=[{"role": "user", "content": content}],
     )
 

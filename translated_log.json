@@ -104,11 +104,11 @@
     "cost_usd": 0.608805,
     "input_tokens": 9682,
     "output_tokens": 6181,
-    "detection_mode": "text",
+    "chosen_mode": "text",
     "recognizability": 0.8917,
-    "max_garbage_run": 5,
+    "max_garbage_run_DIAGNOSTIC": 5,
     "total_tokens": 1053,
-    "detection_reason": "text: 89% recognizable, max garbage run 5"
+    "mode_reasoning": "text: 89% recognizable, max garbage run 5"
   },
   {
     "drive_file_id": "1nMFbJ8TIC5rPUt33IrKmtyw5cyT7ZmmM",
@@ -668,11 +668,11 @@
     "cost_usd": 1.51938,
     "input_tokens": 51462,
     "output_tokens": 9966,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.7965,
-    "max_garbage_run": 6,
+    "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 978,
-    "detection_reason": "image: 80% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 80% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1DqudSz8VrxF83fKy6Pw7g5w_RAia8XJG",
@@ -686,11 +686,11 @@
     "cost_usd": 0.49497,
     "input_tokens": 13348,
     "output_tokens": 3930,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.4654,
-    "max_garbage_run": 20,
+    "max_garbage_run_DIAGNOSTIC": 20,
     "total_tokens": 159,
-    "detection_reason": "image: 47% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 47% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "13dcGRtwhoLjFYzChsY3SSziblpYXhb4u",
@@ -704,11 +704,11 @@
     "cost_usd": 0.51327,
     "input_tokens": 13348,
     "output_tokens": 4174,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.4941,
-    "max_garbage_run": 6,
+    "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 85,
-    "detection_reason": "image: 49% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 49% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1Tgx9zir5B8GgRPMu61PyRAU1G2LKfsp1",
@@ -722,11 +722,11 @@
     "cost_usd": 0.659355,
     "input_tokens": 18092,
     "output_tokens": 5173,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.7331,
-    "max_garbage_run": 6,
+    "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 296,
-    "detection_reason": "image: 73% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 73% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "12kufDYiaG6Ypujx6evRutnyAzcN7HSxy",
@@ -740,11 +740,11 @@
     "cost_usd": 1.04592,
     "input_tokens": 27578,
     "output_tokens": 8430,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.5982,
-    "max_garbage_run": 9,
+    "max_garbage_run_DIAGNOSTIC": 9,
     "total_tokens": 336,
-    "detection_reason": "image: 60% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 60% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1YhLJ9Fb29eGDvqyRs8Kk_5vZ-mst6tWC",
@@ -758,11 +758,11 @@
     "cost_usd": 0.77805,
     "input_tokens": 22835,
     "output_tokens": 5807,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.7491,
-    "max_garbage_run": 3,
+    "max_garbage_run_DIAGNOSTIC": 3,
     "total_tokens": 279,
-    "detection_reason": "image: 75% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 75% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1nxUtu_vAOG1UTwh5Og9UwCaxAgP5_lQ_",
@@ -776,11 +776,11 @@
     "cost_usd": 0.281535,
     "input_tokens": 8629,
     "output_tokens": 2028,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.5828,
-    "max_garbage_run": 6,
+    "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 163,
-    "detection_reason": "image: 58% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 58% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1zk7vHh6xv8iFz9G1rMKNYB9c5RYTigG6",
@@ -794,11 +794,11 @@
     "cost_usd": 0.361185,
     "input_tokens": 13394,
     "output_tokens": 2137,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.5595,
-    "max_garbage_run": 13,
+    "max_garbage_run_DIAGNOSTIC": 13,
     "total_tokens": 168,
-    "detection_reason": "image: 56% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 56% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "15NGNix22wdVbmmpxJOnBszmkyLtjoJfS",
@@ -812,11 +812,11 @@
     "cost_usd": 0.34065,
     "input_tokens": 13390,
     "output_tokens": 1864,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.6364,
-    "max_garbage_run": 4,
+    "max_garbage_run_DIAGNOSTIC": 4,
     "total_tokens": 198,
-    "detection_reason": "image: 64% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 64% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "12mi4o_K_0CJEan9WfFv64yF6uHGvuB8r",
@@ -830,11 +830,11 @@
     "cost_usd": 0.386625,
     "input_tokens": 13390,
     "output_tokens": 2477,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.2532,
-    "max_garbage_run": 19,
+    "max_garbage_run_DIAGNOSTIC": 19,
     "total_tokens": 79,
-    "detection_reason": "image: 25% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 25% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "14DCSRurhm23FqGM2f7xu2_-sqf5gm4ka",
@@ -848,11 +848,11 @@
     "cost_usd": 1.24173,
     "input_tokens": 22907,
     "output_tokens": 11975,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.5086,
-    "max_garbage_run": 17,
+    "max_garbage_run_DIAGNOSTIC": 17,
     "total_tokens": 1679,
-    "detection_reason": "image: 51% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 51% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1AAyQptsX-_U_qL0DDG_IUwqHrs67sv7F",
@@ -866,11 +866,11 @@
     "cost_usd": 1.29732,
     "input_tokens": 32933,
     "output_tokens": 10711,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.5268,
-    "max_garbage_run": 8,
+    "max_garbage_run_DIAGNOSTIC": 8,
     "total_tokens": 224,
-    "detection_reason": "image: 53% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 53% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1OPMjt3dVF8eLBbBXchWKUWAVWdN99bq8",
@@ -884,11 +884,11 @@
     "cost_usd": 1.397325,
     "input_tokens": 42455,
     "output_tokens": 10140,
-    "detection_mode": "image",
+    "chosen_mode": "image",
     "recognizability": 0.47,
-    "max_garbage_run": 5,
+    "max_garbage_run_DIAGNOSTIC": 5,
     "total_tokens": 100,
-    "detection_reason": "image: 47% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 47% recognizable, below 85% threshold"
   },
   {
     "drive_file_id": "1j1_C8tKJFaomqSfzVyKBfzB9eA8Z9zwm",
@@ -902,10 +902,10 @@
     "cost_usd": 0.50892,
     "input_tokens": 5588,
     "output_tokens": 5668,
-    "detection_mode": "text",
+    "chosen_mode": "text",
     "recognizability": 0.9635,
-    "max_garbage_run": 1,
+    "max_garbage_run_DIAGNOSTIC": 1,
     "total_tokens": 274,
-    "detection_reason": "text: 96% recognizable, max garbage run 1"
+    "mode_reasoning": "text: 96% recognizable, max garbage run 1"
   }
 ]
