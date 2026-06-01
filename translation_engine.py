@@ -19,7 +19,7 @@ from pdf2image import convert_from_bytes
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-MODEL = "claude-opus-4-7"
+MODEL = "claude-opus-4-8"
 
 # 200 DPI is the sweet spot for handwritten Hebrew:
 # - Low enough that a 10-page scan fits in Claude's context window
@@ -81,12 +81,12 @@ def _pil_to_base64_png(image) -> str:
 
 # ── Cost calculation ───────────────────────────────────────────────────────────
 # Identical formula for both text and image mode — no separate image-token
-# accounting. Claude Opus 4.7 rates: $15/M input tokens, $75/M output tokens.
+# accounting. Claude Opus 4.8 rates: $5/M input tokens, $25/M output tokens.
 # Vision input tokens are priced the same as text input tokens; Anthropic
 # converts images to tokens internally (~1600 tokens per 512×512 tile).
 
 def _calc_cost(usage) -> float:
-    return (usage.input_tokens * 15 + usage.output_tokens * 75) / 1_000_000
+    return (usage.input_tokens * 5 + usage.output_tokens * 25) / 1_000_000
 
 
 # ── Translation functions ──────────────────────────────────────────────────────

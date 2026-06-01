@@ -29,9 +29,9 @@ from translation_engine import (
 )
 
 # ── Fill these in before running ──────────────────────────────────────────────
-DRIVE_FILE_ID = "<paste Drive file ID here>"
-COURSE_HEBREW = "<paste Hebrew course name here>"
-TYPE = "lecture"   # one of: lecture | tutorial | homework | exam
+DRIVE_FILE_ID = "1j1_C8tKJFaomqSfzVyKBfzB9eA8Z9zwm"
+COURSE_HEBREW = "מבוא להתקני מוליכים למחצה"
+TYPE = "lecture"  # one of: lecture | tutorial | homework | exam | reference
 
 # TODO Day 2 Part 4: agent loop will determine type semantically by reading
 # the file's folder path in Drive. For manual single-file runs, set it here.
@@ -43,10 +43,11 @@ SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 # Maps the semantic type value to the subfolder name inside the course folder.
 # "lecture" → vault/<course>/Lectures/<file>_EN.md, etc.
 TYPE_TO_FOLDER = {
-    "lecture":  "Lectures",
-    "tutorial": "Tutorials",
-    "homework": "Homework",
-    "exam":     "Exams",
+    "lecture":   "Lectures",
+    "tutorial":  "Tutorials",
+    "homework":  "Homework",
+    "exam":      "Exams",
+    "reference": "",   # saved directly in the course root folder
 }
 
 
@@ -209,7 +210,10 @@ def main() -> None:
     # Path.stem strips the extension: "הרצאה 4.pdf" → "הרצאה 4"
     stem = Path(drive_filename).stem
     subfolder = TYPE_TO_FOLDER[TYPE]
-    out_path = vault_path / course_english / subfolder / f"{stem}_EN.md"
+    if subfolder:
+        out_path = vault_path / course_english / subfolder / f"{stem}_EN.md"
+    else:
+        out_path = vault_path / course_english / f"{stem}_EN.md"
 
     # parents=True creates intermediate dirs (like mkdir -p).
     # exist_ok=True suppresses the error if the dir already exists.
