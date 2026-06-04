@@ -9,6 +9,7 @@ lived in translate_one.py, translate_image_pdf.py, and init_translation_log.py.
 read_file (dedup reads) and save_to_vault (writes) are expected to use this too.
 """
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,14 @@ from pathlib import Path
 # the previous per-script helpers resolved (PROJECT_ROOT / "translated_log.json").
 _PROJECT_ROOT = Path(__file__).parent
 LOG_PATH = _PROJECT_ROOT / "translated_log.json"
+
+
+def sha256_of(data: bytes) -> str:
+    """Canonical content-hash for the manifest's `source_content_hash` field.
+    The 'sha256:' prefix is part of the stored value — dedup compares against it
+    verbatim, so every producer must use this exact format. (init_translation_log
+    defines an identical helper; this is the home for the agent loop's use.)"""
+    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def load_log() -> list[dict]:

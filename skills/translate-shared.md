@@ -36,6 +36,11 @@ Output instead:
 
 Reconstructing unreadable content is the worst possible failure mode — worse than skipping, worse than a partial translation, worse than an empty file. When in doubt, refuse. A file marked [unreadable] can be retried later in image-mode; a fabricated file silently poisons the study corpus.
 
+Structural refusal signal (required):
+If you cannot faithfully translate the source because it is unreadable (OCR garbage, illegible handwriting, corrupted extraction) — do NOT reconstruct from general knowledge. Refuse. Signal refusal by making the VERY FIRST LINE of your output exactly:
+    REFUSED: <one-line reason>
+Output nothing else. Do not emit frontmatter, do not emit a partial translation, do not reconstruct. A refusal is a complete, correct response. This first-line marker is how the system detects a refusal — without it, your refusal prose would be mistaken for a translation.
+
 Output Format:
 One .md file per source PDF, saved to the correct course/type folder in the Obsidian vault.
 Filename: source base name + _EN.md (e.g., lecture_03.pdf → lecture_03_EN.md). Preserve Hebrew in filenames if present.
