@@ -336,6 +336,7 @@ def save_to_vault(
     mode_reasoning: str,
     vault_path: Path,
     detection_signals: dict | None = None,
+    source_md5: str | None = None,   # Drive md5Checksum — powers read_file's freshness gate
     custom_subfolder: str | None = None,
 ) -> dict:
     """Write the translated .md into the vault and record it in the manifest.
@@ -373,6 +374,8 @@ def save_to_vault(
         "drive_file_name":     drive_filename,
         "source_content_hash": source_hash,
         "md_path":             md_path_relative,
+        # source_md5 added below only when present (binary files have it; native
+        # Google Docs don't) — keeps the field an honest signal for the gate.
         "course":              course_english,
         "type":                type_value,
         "translated_at":       datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -383,8 +386,10 @@ def save_to_vault(
         "chosen_mode":         chosen_mode,
         "mode_reasoning":      mode_reasoning,
     }
-    # Detection signals are written only when present — no null keys, so an
-    # entry's lack of a signal is honest absence (e.g. manual entries never had one).
+    # source_md5 and detection signals are written only when present — no null
+    # keys, so an entry's lack of either is honest absence.
+    if source_md5 is not None:
+        entry["source_md5"] = source_md5
     if detection_signals is not None:
         entry.update(detection_signals)
 

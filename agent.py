@@ -136,7 +136,25 @@ def read_file_logic(file_id):
     """Download → hash → dedup → detect. Returns a result dict (the handler
     json.dumps it). Never raises into the loop: download/parse/detector failures
     come back as {"status": "error", ...}."""
-    # 1. download the raw bytes
+    # 0. md5 freshness gate (sync-immune download-skip). Fetch Drive's content
+    #    checksum — a cheap metadata call, NO byte download. If this file is
+    #    already done with a stored source_md5 that matches, the bytes are
+    #    provably unchanged → return already_done WITHOUT downloading. This sits
+    #    IN FRONT of the SHA dedup as an optimization; SHA stays the authority on
+    #    translate-vs-done (md5 only governs skip-the-download). Drive md5 is None
+    #    for native Google Docs → gate N/A, fall through to the download path.
+    try:
+        drive_md5 = drive.file_md5(file_id)
+    except Exception as e:
+        return {"status": "error", "reason": f"metadata fetch failed: {e}"}
+    entries = manifest.load_log()
+    entry = manifest.find_by_id(entries, file_id)
+    if (drive_md5 is not None and entry is not None
+            and entry.get("md_path") and entry.get("source_md5")
+            and entry["source_md5"] == drive_md5):
+        return {"status": "already_done", "md_path": entry["md_path"]}
+
+    # 1. download the raw bytes (integrity-checked vs Drive size)
     try:
         pdf_bytes = drive.download_bytes(file_id)
     except Exception as e:
@@ -146,9 +164,8 @@ def read_file_logic(file_id):
     #    format from manifest, so it compares verbatim against source_content_hash.
     source_hash = manifest.sha256_of(pdf_bytes)
 
-    # 3. dedup against the manifest (keyed by drive_file_id, gated on hash match)
-    entries = manifest.load_log()
-    entry = manifest.find_by_id(entries, file_id)
+    # 3. dedup against the manifest (keyed by drive_file_id, gated on hash match).
+    #    `entries`/`entry` already loaded for the gate above — reuse them.
     if entry is not None and entry.get("source_content_hash") == source_hash:
         if entry.get("md_path"):
             # already translated (manual or by a prior run)
@@ -183,6 +200,9 @@ def read_file_logic(file_id):
     #    full picture for text-vs-image reasoning. Two shapes: rich to the agent,
     #    lean to the manifest.
     CONTENT_CACHE[source_hash] = pdf_bytes
+    # Drive md5 (from the gate fetch above) cached for save_to_vault to record as
+    # source_md5 → the freshness gate can fast-path this file next time.
+    CONTENT_CACHE[f"{source_hash}:md5"] = drive_md5
     CONTENT_CACHE[f"{source_hash}:signals"] = {
         "recognizability":            signals["recognizability"],
         "tokens_per_page":            signals["tokens_per_page"],
@@ -335,9 +355,11 @@ def handle_save_to_vault(inp):
             {"status": "error",
              "reason": f"cost cache miss for {source_hash} — translate must run first"},
             ensure_ascii=False)
-    # signals are optional: omitted from the manifest when absent (the engine
-    # handles detection_signals=None). present for any file that went through read_file.
+    # signals + md5 are optional: omitted from the manifest when absent (the engine
+    # handles None). present for any file that went through read_file. The md5 lets
+    # read_file's freshness gate fast-path this file (skip the download) next time.
     signals = CONTENT_CACHE.get(f"{source_hash}:signals")
+    source_md5 = CONTENT_CACHE.get(f"{source_hash}:md5")
 
     try:
         result = engine.save_to_vault(
@@ -352,6 +374,7 @@ def handle_save_to_vault(inp):
             mode_reasoning=inp["mode_reasoning"],
             vault_path=Path(os.environ["OBSIDIAN_VAULT_PATH"]),
             detection_signals=signals,
+            source_md5=source_md5,
             custom_subfolder=inp.get("custom_subfolder"),
         )
     except ValueError as e:

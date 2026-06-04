@@ -71,6 +71,18 @@ def download_bytes(file_id):
     )
 
 
+def file_md5(file_id):
+    """Drive's md5Checksum for a file — a content-derived checksum that changes
+    ONLY when the bytes change (sync-immune, unlike modifiedTime which churns on
+    the synced notebook folder). Cheap metadata call, NO byte download. Returns
+    None for native Google Docs (Sheets/Docs/Slides have no md5Checksum) — our
+    corpus is all binary PDFs, so that's the rare fall-through case."""
+    meta = service.files().get(
+        fileId=file_id, fields="md5Checksum"
+    ).execute(num_retries=_NUM_RETRIES)
+    return meta.get("md5Checksum")  # None → native Google file → gate N/A
+
+
 def list_folder_children(folder_id):
     """Direct children of a Drive folder — NOT recursive. The agent walks the
     tree itself via repeated calls. Paginates so 100+ file folders don't truncate.

@@ -38,7 +38,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "a78fd00058eb318f681af0a209fa9669"
   },
   {
     "drive_file_id": "1M_XrLCCF4Be72QhHJeH9t8njVdUEPEby",
@@ -51,7 +52,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "4c13f9be94812385911a09e814fb2bfd"
   },
   {
     "drive_file_id": "1urr6nnyJw14P_Ua5WUaHOVV6kLRVw38X",
@@ -64,7 +66,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "a9983399e9a0434010ac70026ce6c7de"
   },
   {
     "drive_file_id": "10YZ3Ed_PeLGxCkNls7-HQA8nQ03mwMCk",
@@ -77,7 +80,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "ec28c40c8714069d7ebad5dcc2586e3a"
   },
   {
     "drive_file_id": "1j02eidUZrmLLnRq5Km8hrKl1rCB5xy71",
@@ -90,7 +94,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "bb63445cb8128b8e9464bbfcdf89699c"
   },
   {
     "drive_file_id": "1UKRi46WMrXGJyWaJPcUhC-gOnBiSXo8b",
@@ -108,7 +113,8 @@
     "recognizability": 0.8917,
     "max_garbage_run_DIAGNOSTIC": 5,
     "total_tokens": 1053,
-    "mode_reasoning": "text: 89% recognizable, max garbage run 5"
+    "mode_reasoning": "text: 89% recognizable, max garbage run 5",
+    "source_md5": "d9feda71a06720fd08d550a4e745717d"
   },
   {
     "drive_file_id": "1nMFbJ8TIC5rPUt33IrKmtyw5cyT7ZmmM",
@@ -121,7 +127,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "9d684f70b691ab2c2fb8f3ddd874368b"
   },
   {
     "drive_file_id": "1b1qYkoXi6PK0Lbl-pWXWjkBzOxARNgl5",
@@ -134,7 +141,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "a016a5de68b5a120214a88bfaedcad92"
   },
   {
     "drive_file_id": "1TN13MlZg4-cSyWhtGca6ju04IS-m1r1r",
@@ -147,7 +155,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "f5127a87ceda3c84b5b69cc10de1bebc"
   },
   {
     "drive_file_id": "1X_5TKef4ywiQX6gsls9R8pqoK6aSWgNz",
@@ -160,7 +169,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "5abd0955eab4e94d5f657ec5f002950a"
   },
   {
     "drive_file_id": "1_MnsEeimrUIu2v0vpDIuflji0oCVTwL4",
@@ -173,7 +183,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "94b85fb778d11d60776f9508b4aa83d0"
   },
   {
     "drive_file_id": "19Le4AtcWhm6MtxTmlySx-foCgFFe4Jch",
@@ -186,7 +197,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "11eed018762fab3ac18bef7e2d25db1d"
   },
   {
     "drive_file_id": "1aRtbxYJO-B-0HaLZbwWoptqVnlvqrtxJ",
@@ -199,7 +211,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "427ea1d05111c8552a2c19897a1974cf"
   },
   {
     "drive_file_id": "1mVAIOg58F0bptKIuPJ6t2F1v7fq-cDkr",
@@ -212,7 +225,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "3411328415d29da9df6ed5052d59eb37"
   },
   {
     "drive_file_id": "1NTdmsU65vO_RamTlMNb7pX2OM1-tyfws",
@@ -264,7 +278,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "d041524a43c693a8cbb8aedbcbff2026"
   },
   {
     "drive_file_id": "1OPpcP1wB0UJzDF4DA8dRx_I9-AAlMp45",
@@ -277,7 +292,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "55bc90c4f7911968b789b131bfa46608"
   },
   {
     "drive_file_id": "1X3ZnoPpKm4-tNU9CKZyGXjRAgqRDGsMV",
@@ -290,20 +306,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
-  },
-  {
-    "drive_file_id": "1ItrOajBF_MQFgDTViIXx2jgBairRapuN",
-    "drive_file_name": "מרוכבות הרצאה 5 - 23.4.pdf",
-    "source_content_hash": "sha256:e801595ceff5b60f4af6d5a965ef6c984eece195d7f906c8aa8ab03e429eeb8c",
-    "md_path": "Complex Functions/Lectures/מרוכבות_הרצאה_5_-_23_4_EN.md",
-    "course": "Complex Functions",
-    "type": "lecture",
-    "translated_at": "2026-05-04T15:10:05Z",
-    "model": "manual",
-    "cost_usd": 0,
-    "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "8d40f4be8e1e5653be46cf98eba87b18"
   },
   {
     "drive_file_id": "1-nRbdNdKpVBWQW-yh263kOiJC4vnmAkZ",
@@ -316,7 +320,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "c824122c73f9df790ecb868f211f392e"
   },
   {
     "drive_file_id": "1RyKHkhX7olf9jGM7fmwBMIum4139G33Q",
@@ -329,7 +334,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "8ee399ad9a889be251e61b84dbdb0744"
   },
   {
     "drive_file_id": "1m8E_ouA6XgU-w8eEj-0JabZal3RySs90",
@@ -342,7 +348,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "fe06ba21b47216d135ae1704d30ca97f"
   },
   {
     "drive_file_id": "1LESSzR1kCz7MXsXsQovmj0PwjzOd2Uoc",
@@ -355,7 +362,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "1c420fde950a77aa31fcadd498cf4695"
   },
   {
     "drive_file_id": "1aVf2AVVxicJqOLNxZ5_DIQ6y8jwRddFC",
@@ -368,7 +376,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "2b3c471593642a9135bcdc37f3a11826"
   },
   {
     "drive_file_id": "1UMmCVCJD98T-fwxB_XY0WNpFO6MSkITI",
@@ -390,7 +399,8 @@
     "math_token_fraction": 0.0064,
     "max_garbage_run_DIAGNOSTIC": 12,
     "page_count": 7,
-    "file_size_kb": 650
+    "file_size_kb": 650,
+    "source_md5": "71d8c150366e1fcb5bc51bd3f346c9f5"
   },
   {
     "drive_file_id": "1_xRDpgrVix1-eBlaENS2eqrqaA2UDY-k",
@@ -403,7 +413,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "008c4ae38b5f7f1a298ee08de0602493"
   },
   {
     "drive_file_id": "1k_r3mRzl8b4ZVQndd3gG-SefOpiEmDRd",
@@ -425,7 +436,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 15,
     "page_count": 20,
-    "file_size_kb": 27663
+    "file_size_kb": 27663,
+    "source_md5": "1004295fef3d7457f10015fb4422af96"
   },
   {
     "drive_file_id": "1A6-YHuW8kCkYSscjirqJSYt7-oemDBhJ",
@@ -447,7 +459,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 13,
-    "file_size_kb": 20937
+    "file_size_kb": 20937,
+    "source_md5": "a3738f74abecec58b3d3349b0ab0758b"
   },
   {
     "drive_file_id": "1dkc3wiQ22DOJ2irIsYf7qr8NwTUS7qCh",
@@ -482,7 +495,8 @@
     "math_token_fraction": 0.0329,
     "max_garbage_run_DIAGNOSTIC": 22,
     "page_count": 6,
-    "file_size_kb": 529
+    "file_size_kb": 529,
+    "source_md5": "18e5011558418d513e1c5e084ce9d148"
   },
   {
     "drive_file_id": "1Hnw6ye-pjm1_cmGckAthzigxH01ZYkHT",
@@ -495,7 +509,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "c21700726bd55723ed7b4006d17414ae"
   },
   {
     "drive_file_id": "14eYrwHmwEMTkY3Gi4r_Ufzn8cLywfP7X",
@@ -508,7 +523,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "ba49998884a5b1ffe13ddebf15327bb1"
   },
   {
     "drive_file_id": "1MBbaizXK8gsntkjm8u8On3ZkBfiZY0fU",
@@ -521,7 +537,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "eb04a5a26ffc1a90d85d3f2d34c9b9a3"
   },
   {
     "drive_file_id": "1nlS47d5Z1C13LBfeo_1KeZOFlSa-FYWs",
@@ -534,7 +551,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "f81aae83fe8485a27206cb92a710d83c"
   },
   {
     "drive_file_id": "1lSPH3zSD5PYRFn2YIpqsqA0GvD5BO1s4",
@@ -547,7 +565,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "ef69f9d9ce851375bb2b0a1ae7c68772"
   },
   {
     "drive_file_id": "1FxG3b-fvUKhIBspe-SnvtBeAjLFnkA4Q",
@@ -560,7 +579,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "4751a7dd5fe52cb173a24846c439cd49"
   },
   {
     "drive_file_id": "1LqYdZbU6dM_2GIBLbxUJSIQizr3qW7lA",
@@ -573,7 +593,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "ae895c7f7c2c6beb6ef2a6752330fdbd"
   },
   {
     "drive_file_id": "1v3nqSqRSFFJl3ZnAplE4b5_zjagiZWAu",
@@ -586,7 +607,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "e4d39c3865b7e49c6b907293ba4c7357"
   },
   {
     "drive_file_id": "1fyF9SdZ2WoYdqNXNefRgT3z6BXjqNIRY",
@@ -599,7 +621,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "09a1dabb06fd03e3e3c9417e38288d0a"
   },
   {
     "drive_file_id": "1op9VaiHQGdBnyHpeB0Bu5ToEpHpj5I-3",
@@ -612,7 +635,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "07d65f57115176e6147da58fa11dab09"
   },
   {
     "drive_file_id": "1WCpcVyO_3QFwMFsYYw_f_2kw_YQWiRmr",
@@ -625,7 +649,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "26ac4d391162290dfd127be4436e5666"
   },
   {
     "drive_file_id": "1G_IasnEA7DU921Rstzh0DoM03xa_bXeJ",
@@ -638,7 +663,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "fd6aa65f45994a121baac6268b067fb8"
   },
   {
     "drive_file_id": "1ym6UJNZTwl62HMDN8QeNaLRvJopYS67F",
@@ -651,7 +677,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "be78a2c558cb6f6b9e4967d59e8a9b15"
   },
   {
     "drive_file_id": "12VHpqI6w97IhrGbjDvubGqvMFD_vATLI",
@@ -664,7 +691,8 @@
     "model": "manual",
     "cost_usd": 0,
     "input_tokens": 0,
-    "output_tokens": 0
+    "output_tokens": 0,
+    "source_md5": "0b8b9a60f22d5c738a4a6d4091a62b2f"
   },
   {
     "drive_file_id": "1wk12FJdY_-fYd4QtvAA-AbOiXyGhXvEO",
@@ -677,7 +705,8 @@
     "model": "claude-opus-4-7",
     "cost_usd": 0.11158,
     "input_tokens": 4611,
-    "output_tokens": 3541
+    "output_tokens": 3541,
+    "source_md5": "d2a1fecfe8acee512173a71b83b644db"
   },
   {
     "drive_file_id": "1Zn4UPU2eU34frv3j_QHKtAigr3_4dR4T",
@@ -699,7 +728,8 @@
     "math_token_fraction": 0.027,
     "max_garbage_run_DIAGNOSTIC": 10,
     "page_count": 8,
-    "file_size_kb": 656
+    "file_size_kb": 656,
+    "source_md5": "b31fd5f4754836d25360f75fe5031aa3"
   },
   {
     "drive_file_id": "1wW1mT9Ab1C-x6cdGLOrndkU_82JQNjuP",
@@ -717,7 +747,8 @@
     "recognizability": 0.7965,
     "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 978,
-    "mode_reasoning": "image: 80% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 80% recognizable, below 85% threshold",
+    "source_md5": "f3e5de44820bfca181e9fef4db46ecee"
   },
   {
     "drive_file_id": "1DqudSz8VrxF83fKy6Pw7g5w_RAia8XJG",
@@ -739,7 +770,8 @@
     "math_token_fraction": 0.0064,
     "max_garbage_run_DIAGNOSTIC": 18,
     "page_count": 2,
-    "file_size_kb": 1125
+    "file_size_kb": 1125,
+    "source_md5": "b8f6a955f8f43ea2bdb8f1ab01dafbd4"
   },
   {
     "drive_file_id": "13dcGRtwhoLjFYzChsY3SSziblpYXhb4u",
@@ -757,7 +789,8 @@
     "recognizability": 0.4941,
     "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 85,
-    "mode_reasoning": "image: 49% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 49% recognizable, below 85% threshold",
+    "source_md5": "f5a4fe35fa330aadcb948098680fe2ff"
   },
   {
     "drive_file_id": "1Tgx9zir5B8GgRPMu61PyRAU1G2LKfsp1",
@@ -775,7 +808,8 @@
     "recognizability": 0.7331,
     "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 296,
-    "mode_reasoning": "image: 73% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 73% recognizable, below 85% threshold",
+    "source_md5": "b41454172670cabddd5247a064e64f9e"
   },
   {
     "drive_file_id": "12kufDYiaG6Ypujx6evRutnyAzcN7HSxy",
@@ -793,7 +827,8 @@
     "recognizability": 0.5982,
     "max_garbage_run_DIAGNOSTIC": 9,
     "total_tokens": 336,
-    "mode_reasoning": "image: 60% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 60% recognizable, below 85% threshold",
+    "source_md5": "cc27d5b1fd4ab4ed177208d3f19e7861"
   },
   {
     "drive_file_id": "1YhLJ9Fb29eGDvqyRs8Kk_5vZ-mst6tWC",
@@ -811,7 +846,8 @@
     "recognizability": 0.7491,
     "max_garbage_run_DIAGNOSTIC": 3,
     "total_tokens": 279,
-    "mode_reasoning": "image: 75% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 75% recognizable, below 85% threshold",
+    "source_md5": "33d1a72e0b36bb5d95c06172d8b4159d"
   },
   {
     "drive_file_id": "1nxUtu_vAOG1UTwh5Og9UwCaxAgP5_lQ_",
@@ -829,7 +865,8 @@
     "recognizability": 0.5828,
     "max_garbage_run_DIAGNOSTIC": 6,
     "total_tokens": 163,
-    "mode_reasoning": "image: 58% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 58% recognizable, below 85% threshold",
+    "source_md5": "593509bfd4acc12941b77cbc80d0d012"
   },
   {
     "drive_file_id": "1zk7vHh6xv8iFz9G1rMKNYB9c5RYTigG6",
@@ -847,7 +884,8 @@
     "recognizability": 0.5595,
     "max_garbage_run_DIAGNOSTIC": 13,
     "total_tokens": 168,
-    "mode_reasoning": "image: 56% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 56% recognizable, below 85% threshold",
+    "source_md5": "d81fdcbe632e5a24a4d1580feb77f247"
   },
   {
     "drive_file_id": "15NGNix22wdVbmmpxJOnBszmkyLtjoJfS",
@@ -865,7 +903,8 @@
     "recognizability": 0.6364,
     "max_garbage_run_DIAGNOSTIC": 4,
     "total_tokens": 198,
-    "mode_reasoning": "image: 64% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 64% recognizable, below 85% threshold",
+    "source_md5": "1a1d7f173d4c495bb700abc82d32d238"
   },
   {
     "drive_file_id": "12mi4o_K_0CJEan9WfFv64yF6uHGvuB8r",
@@ -883,7 +922,8 @@
     "recognizability": 0.2532,
     "max_garbage_run_DIAGNOSTIC": 19,
     "total_tokens": 79,
-    "mode_reasoning": "image: 25% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 25% recognizable, below 85% threshold",
+    "source_md5": "0ed4f1fcb8f57b01ecbe3a2c75c95929"
   },
   {
     "drive_file_id": "14DCSRurhm23FqGM2f7xu2_-sqf5gm4ka",
@@ -901,7 +941,8 @@
     "recognizability": 0.5086,
     "max_garbage_run_DIAGNOSTIC": 17,
     "total_tokens": 1679,
-    "mode_reasoning": "image: 51% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 51% recognizable, below 85% threshold",
+    "source_md5": "962ff55a39fd4af02ce99cf660ffb1f5"
   },
   {
     "drive_file_id": "1AAyQptsX-_U_qL0DDG_IUwqHrs67sv7F",
@@ -919,7 +960,8 @@
     "recognizability": 0.5268,
     "max_garbage_run_DIAGNOSTIC": 8,
     "total_tokens": 224,
-    "mode_reasoning": "image: 53% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 53% recognizable, below 85% threshold",
+    "source_md5": "c6e664d8b998ccc6c413dac43ac5caf4"
   },
   {
     "drive_file_id": "1OPMjt3dVF8eLBbBXchWKUWAVWdN99bq8",
@@ -937,7 +979,8 @@
     "recognizability": 0.47,
     "max_garbage_run_DIAGNOSTIC": 5,
     "total_tokens": 100,
-    "mode_reasoning": "image: 47% recognizable, below 85% threshold"
+    "mode_reasoning": "image: 47% recognizable, below 85% threshold",
+    "source_md5": "13ff457cd70e34f6ee282b09cb9313f4"
   },
   {
     "drive_file_id": "1j1_C8tKJFaomqSfzVyKBfzB9eA8Z9zwm",
@@ -955,7 +998,8 @@
     "recognizability": 0.9635,
     "max_garbage_run_DIAGNOSTIC": 1,
     "total_tokens": 274,
-    "mode_reasoning": "text: 96% recognizable, max garbage run 1"
+    "mode_reasoning": "text: 96% recognizable, max garbage run 1",
+    "source_md5": "d26235be54c9f02058c9729630402b9c"
   },
   {
     "drive_file_id": "10m3j9tGs6ou0Zib1-GudVpG2hkZsRs8t",
@@ -1004,7 +1048,8 @@
     ],
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 4,
-    "file_size_kb": 1808
+    "file_size_kb": 1808,
+    "source_md5": "1a9b32b53f847b0fd834375eaa1eccab"
   },
   {
     "drive_file_id": "1MBZZg2gpHOyMyHhZ2ofdHZT9m0cIuDkX",
@@ -1026,7 +1071,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 18,
-    "file_size_kb": 11216
+    "file_size_kb": 11216,
+    "source_md5": "63f44daa35144bcc643c518cb284d1b1"
   },
   {
     "drive_file_id": "1KPkaxzuOVs9A0EaEXk5M7UOmIaqqNDuS",
@@ -1048,7 +1094,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 20,
-    "file_size_kb": 1822
+    "file_size_kb": 1822,
+    "source_md5": "f81c7b752e478193f341584749b20d50"
   },
   {
     "drive_file_id": "1_VO-ccv0gKAzVncsnrjU3jH8KQSBVfoH",
@@ -1070,7 +1117,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 17,
     "page_count": 2,
-    "file_size_kb": 1121
+    "file_size_kb": 1121,
+    "source_md5": "3bb2aaafceb2947ba57b3c3b23b0a213"
   },
   {
     "drive_file_id": "1Ezx2qmqx_gvgaP2yd9FZCXeliBaC3oLo",
@@ -1092,7 +1140,8 @@
     "math_token_fraction": 0.0344,
     "max_garbage_run_DIAGNOSTIC": 37,
     "page_count": 5,
-    "file_size_kb": 520
+    "file_size_kb": 520,
+    "source_md5": "4a8afbdae70c4862da23482eba994925"
   },
   {
     "drive_file_id": "11z21pK5ZyLQC3IbfTfmONvMTLUHZgPS7",
@@ -1114,7 +1163,8 @@
     "math_token_fraction": 0.0242,
     "max_garbage_run_DIAGNOSTIC": 10,
     "page_count": 13,
-    "file_size_kb": 1403
+    "file_size_kb": 1403,
+    "source_md5": "311d5cf66b64cfce3841576dd81a4ccb"
   },
   {
     "drive_file_id": "1rLal7LtRCoNE227YJvNuTVg4Qrv2cfYT",
@@ -1136,7 +1186,8 @@
     "math_token_fraction": 0.0257,
     "max_garbage_run_DIAGNOSTIC": 12,
     "page_count": 12,
-    "file_size_kb": 1227
+    "file_size_kb": 1227,
+    "source_md5": "616753d536a8204e9917eb9d2d1d3b76"
   },
   {
     "drive_file_id": "11qzDgnSXmxQ-Ij4RTL3VQM_vbmcvgMdS",
@@ -1158,7 +1209,8 @@
     "math_token_fraction": 0.0216,
     "max_garbage_run_DIAGNOSTIC": 10,
     "page_count": 16,
-    "file_size_kb": 1912
+    "file_size_kb": 1912,
+    "source_md5": "c5481616a9ece73988478647d10723aa"
   },
   {
     "drive_file_id": "1f_uEU0RixJuLCrYhFyTznOhmnr3HX-3n",
@@ -1180,7 +1232,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 8,
-    "file_size_kb": 4642
+    "file_size_kb": 4642,
+    "source_md5": "60394b17e390144be097a18f5da91030"
   },
   {
     "drive_file_id": "13E8KDN0X_8nhaDKNF3Ubso-fElKFL1-d",
@@ -1202,7 +1255,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 8,
     "page_count": 6,
-    "file_size_kb": 2996
+    "file_size_kb": 2996,
+    "source_md5": "46101ee1f646b0e039423daef459e1c1"
   },
   {
     "drive_file_id": "1c26yMm8jB3hvqNSVKyv0RACcc0pjUXyJ",
@@ -1224,7 +1278,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 2,
-    "file_size_kb": 646
+    "file_size_kb": 646,
+    "source_md5": "2c54ec963c0cff37eb46545897887083"
   },
   {
     "drive_file_id": "1V_fPem9YbA18kAPSq6VLVB8rKaMvdPAW",
@@ -1246,7 +1301,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 3,
-    "file_size_kb": 3734
+    "file_size_kb": 3734,
+    "source_md5": "beb965bc84e3316045679b34cf93419e"
   },
   {
     "drive_file_id": "18fiMHWAnt-mJu4fwktCU0A2g8KhJZOwh",
@@ -1268,7 +1324,8 @@
     "math_token_fraction": 0.0163,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 8,
-    "file_size_kb": 4088
+    "file_size_kb": 4088,
+    "source_md5": "7a5b80dff35700b4cadbb5353baab919"
   },
   {
     "drive_file_id": "1fqenNI7jiA3gBqJBAud_5OkE_YTCuhj3",
@@ -1290,7 +1347,8 @@
     "math_token_fraction": 0.0237,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 11,
-    "file_size_kb": 3331
+    "file_size_kb": 3331,
+    "source_md5": "d3e753391ad030c6b8988e5c2865bb06"
   },
   {
     "drive_file_id": "1TZsC7fgnXl4Y6tCinZ7FgrRPVCjzp6io",
@@ -1312,7 +1370,8 @@
     "math_token_fraction": 0.043,
     "max_garbage_run_DIAGNOSTIC": 3,
     "page_count": 15,
-    "file_size_kb": 1755
+    "file_size_kb": 1755,
+    "source_md5": "4b7f3431c0c8008095282877067d5b39"
   },
   {
     "drive_file_id": "1DMlqi8Sou9RN0C41P0WWCeK1XzFOFHBn",
@@ -1334,7 +1393,8 @@
     "math_token_fraction": 0.1059,
     "max_garbage_run_DIAGNOSTIC": 9,
     "page_count": 14,
-    "file_size_kb": 945
+    "file_size_kb": 945,
+    "source_md5": "5c98172e9d4e12038bb8da51a4370303"
   },
   {
     "drive_file_id": "1123pukTM_3Kzn5bPiO95Q23lb3apSSoq",
@@ -1356,7 +1416,8 @@
     "math_token_fraction": 0.0183,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 18,
-    "file_size_kb": 1256
+    "file_size_kb": 1256,
+    "source_md5": "c28dbed3d580909e18163ff3bf06ee58"
   },
   {
     "drive_file_id": "1gXUF3X3WjUly-61DWFFfK1vrL4Etzkeu",
@@ -1378,7 +1439,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 13,
-    "file_size_kb": 1127
+    "file_size_kb": 1127,
+    "source_md5": "d37503361549161b5271e047f4583e8f"
   },
   {
     "drive_file_id": "11LIsPIvrM2oi8U9QumJYArQJPt2IUMgJ",
@@ -1400,7 +1462,8 @@
     "math_token_fraction": 0.1101,
     "max_garbage_run_DIAGNOSTIC": 16,
     "page_count": 23,
-    "file_size_kb": 1892
+    "file_size_kb": 1892,
+    "source_md5": "f62e028a437ca0216a8ec2cfa9e76c22"
   },
   {
     "drive_file_id": "15amT3KDXsoC-h9DBLL3YaHbU6ignMrfN",
@@ -1422,7 +1485,8 @@
     "math_token_fraction": 0.0018,
     "max_garbage_run_DIAGNOSTIC": 21,
     "page_count": 6,
-    "file_size_kb": 230
+    "file_size_kb": 230,
+    "source_md5": "c52cfd52bf572dcbc24b105cf02db038"
   },
   {
     "drive_file_id": "15UOwjwOjtVqUFGh7WxXgVg1o2D7iAlK4",
@@ -1444,7 +1508,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 34,
     "page_count": 7,
-    "file_size_kb": 319
+    "file_size_kb": 319,
+    "source_md5": "e1a9ec57f97a982aece153662bdbb54b"
   },
   {
     "drive_file_id": "1HH4WCGa2nAiuTuFX_LBNzP8lPkPP-kh5",
@@ -1466,7 +1531,8 @@
     "math_token_fraction": 0.0116,
     "max_garbage_run_DIAGNOSTIC": 30,
     "page_count": 10,
-    "file_size_kb": 1269
+    "file_size_kb": 1269,
+    "source_md5": "478ccdf5d215ccf79a0a458c81934ef3"
   },
   {
     "drive_file_id": "1VbP-VEC4BuxJrOPfP82fltvKiocYkmE2",
@@ -1488,7 +1554,8 @@
     "math_token_fraction": 0.0179,
     "max_garbage_run_DIAGNOSTIC": 11,
     "page_count": 9,
-    "file_size_kb": 676
+    "file_size_kb": 676,
+    "source_md5": "aa93a862b5dbf767c2e97aaef1a12fcd"
   },
   {
     "drive_file_id": "1fRksHaGAy_iEKWAFj5T4E1lR2FBZAffG",
@@ -1510,7 +1577,8 @@
     "math_token_fraction": 0.0189,
     "max_garbage_run_DIAGNOSTIC": 8,
     "page_count": 4,
-    "file_size_kb": 434
+    "file_size_kb": 434,
+    "source_md5": "7c5234125d57c61084b2e055f9331e79"
   },
   {
     "drive_file_id": "1AMmex36TLwYpL1W6Vzq1nNsjXqbNvZq5",
@@ -1532,7 +1600,8 @@
     "math_token_fraction": 0.0166,
     "max_garbage_run_DIAGNOSTIC": 12,
     "page_count": 7,
-    "file_size_kb": 855
+    "file_size_kb": 855,
+    "source_md5": "3bdaef580c45bac3e42b4620408ff37d"
   },
   {
     "drive_file_id": "1i7qHe7xE94FmBJCcP96AIXNjxc2Q4vxJ",
@@ -1554,7 +1623,8 @@
     "math_token_fraction": 0.0112,
     "max_garbage_run_DIAGNOSTIC": 10,
     "page_count": 4,
-    "file_size_kb": 670
+    "file_size_kb": 670,
+    "source_md5": "a84a581b9b943da33762d4e74c982b9d"
   },
   {
     "drive_file_id": "1bkoLue6xw1uvDP2wX8MWZDNqRw_Ir2_X",
@@ -1576,7 +1646,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 5,
-    "file_size_kb": 202
+    "file_size_kb": 202,
+    "source_md5": "ec27eda0c077a05f8c9ddc2e9d894b07"
   },
   {
     "drive_file_id": "1ok2HZdIzg05LUp81ifeUlPpHveSAie5U",
@@ -1598,7 +1669,8 @@
     "math_token_fraction": 0.0603,
     "max_garbage_run_DIAGNOSTIC": 6,
     "page_count": 7,
-    "file_size_kb": 701
+    "file_size_kb": 701,
+    "source_md5": "b4de1edd9abca2013024dd03a90068e6"
   },
   {
     "drive_file_id": "1XlBowdwSUs_zHoBrbfPxdlRBzIzVC3Kg",
@@ -1620,7 +1692,8 @@
     "math_token_fraction": 0.0519,
     "max_garbage_run_DIAGNOSTIC": 11,
     "page_count": 6,
-    "file_size_kb": 632
+    "file_size_kb": 632,
+    "source_md5": "d0197d8bc511ec3fe98b184755655b47"
   },
   {
     "drive_file_id": "1F_DshDlkaggYliHKVACGUhg6fBKhJZgI",
@@ -1642,7 +1715,8 @@
     "math_token_fraction": 0.0623,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 5,
-    "file_size_kb": 547
+    "file_size_kb": 547,
+    "source_md5": "9a4bf4211bee636f7f340dd356dbd7ed"
   },
   {
     "drive_file_id": "1i5wpBBHYRUyC9jUvq4_vRzP5ANDEe5G2",
@@ -1664,7 +1738,8 @@
     "math_token_fraction": 0.0507,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 7,
-    "file_size_kb": 933
+    "file_size_kb": 933,
+    "source_md5": "76bb2364ee96f35bad559065526ad3d2"
   },
   {
     "drive_file_id": "1UPXJyA0eI9J0_1QKxOq9ljlps3RA1ebs",
@@ -1686,7 +1761,8 @@
     "math_token_fraction": 0.0369,
     "max_garbage_run_DIAGNOSTIC": 13,
     "page_count": 9,
-    "file_size_kb": 700
+    "file_size_kb": 700,
+    "source_md5": "b4aa1e9b48af474aa01a57ff0fb9d510"
   },
   {
     "drive_file_id": "1YtOBzCrxtbLPI8HuCLFMBhCOjtUsJqxi",
@@ -1708,7 +1784,8 @@
     "math_token_fraction": 0.0417,
     "max_garbage_run_DIAGNOSTIC": 13,
     "page_count": 10,
-    "file_size_kb": 817
+    "file_size_kb": 817,
+    "source_md5": "ff4832a34bc6d68af0fdb34e8419ff4f"
   },
   {
     "drive_file_id": "1pobOMmjLo2BC_y-VamBt_6uZqntiT0fN",
@@ -1730,7 +1807,8 @@
     "math_token_fraction": 0.04,
     "max_garbage_run_DIAGNOSTIC": 12,
     "page_count": 7,
-    "file_size_kb": 743
+    "file_size_kb": 743,
+    "source_md5": "7ca7ac8b4da92656fb5d2a86e8ad9b52"
   },
   {
     "drive_file_id": "1CnbPCH_mrhqAvtUV6b7ZjEibm5ddbLS8",
@@ -1752,7 +1830,8 @@
     "math_token_fraction": 0.0295,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 8,
-    "file_size_kb": 522
+    "file_size_kb": 522,
+    "source_md5": "76a660d0090906cf009d986ad668b1a7"
   },
   {
     "drive_file_id": "1gnPhHF3Nl4qbu6qcsmeQg2FFPwtw_Xr7",
@@ -1774,7 +1853,8 @@
     "math_token_fraction": 0.049,
     "max_garbage_run_DIAGNOSTIC": 22,
     "page_count": 9,
-    "file_size_kb": 784
+    "file_size_kb": 784,
+    "source_md5": "2666d1545150b74891a2aa416954b2aa"
   },
   {
     "drive_file_id": "1D66KfTqG1Oa_f5SkW7Td5wIeUgb0qtoZ",
@@ -1796,7 +1876,8 @@
     "math_token_fraction": 0.0256,
     "max_garbage_run_DIAGNOSTIC": 14,
     "page_count": 8,
-    "file_size_kb": 495
+    "file_size_kb": 495,
+    "source_md5": "c3194948a8636e51c735b031b94eb051"
   },
   {
     "drive_file_id": "1tWkR983abB87BdRRUEHNU6-m53FtWhk4",
@@ -1818,7 +1899,8 @@
     "math_token_fraction": 0.0174,
     "max_garbage_run_DIAGNOSTIC": 20,
     "page_count": 7,
-    "file_size_kb": 548
+    "file_size_kb": 548,
+    "source_md5": "aca73629f8f751215e11cbcaca97af83"
   },
   {
     "drive_file_id": "1KcAZPme0pyUI9Plb5uLoAGow1XPuexPw",
@@ -1840,7 +1922,8 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 5,
-    "file_size_kb": 202
+    "file_size_kb": 202,
+    "source_md5": "d43f9bca9f3a082f0f83f5de0348a0c7"
   },
   {
     "drive_file_id": "1WQl9C4xI9L55vDO8OmipeUYlSPMRsxVB",
@@ -1862,6 +1945,7 @@
     "math_token_fraction": 0.0487,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 3,
-    "file_size_kb": 309
+    "file_size_kb": 309,
+    "source_md5": "b2ea146343b07924b6db285710ba9957"
   }
 ]
