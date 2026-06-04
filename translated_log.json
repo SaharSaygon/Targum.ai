@@ -1947,5 +1947,28 @@
     "page_count": 3,
     "file_size_kb": 309,
     "source_md5": "b2ea146343b07924b6db285710ba9957"
+  },
+  {
+    "drive_file_id": "18u9ZWmDr9GR2GQFx24R3egWFORpMzGPB",
+    "drive_file_name": "HW 2_v1_QUES.pdf",
+    "source_content_hash": "sha256:21a86bf89a98b8c0acbbba22efee49858785df2b457b3ccca7778b3736cbbeb9",
+    "md_path": "Introduction to Linear Systems/Homework/HW 2_v1_QUES_EN.md",
+    "course": "Introduction to Linear Systems",
+    "type": "homework",
+    "translated_at": "2026-06-04T21:12:57Z",
+    "model": "claude-opus-4-8",
+    "cost_usd": 0.153935,
+    "input_tokens": 8317,
+    "output_tokens": 4494,
+    "chosen_mode": "text",
+    "mode_reasoning": "recognizability 0.85, tokens_per_page 189, math_token_fraction 0.018, low garbage → typed text",
+    "source_md5": "c7f1061e9cec06f11fd496057eb45e4a",
+    "recognizability": 0.8519,
+    "tokens_per_page": 189.0,
+    "bytes_per_token": 465.95,
+    "math_token_fraction": 0.0185,
+    "max_garbage_run_DIAGNOSTIC": 6,
+    "page_count": 4,
+    "file_size_kb": 344
   }
 ]
