@@ -45,7 +45,9 @@ TOOLS = [
             "required": ["file_id"],
         },
     },
-    {
+    {   # RETAINED 2026-06-06: 0 calls across Phase 1 (~97 files); scalar signals carried
+        # every mode decision. Kept as fallback for future semesters with genuinely
+        # ambiguous text-vs-image files. Drop if still unused after more real runs.
         "name": "fetch_signal_detail",
         "description": "Fetch the verbose extraction-signal detail (per_page array + unrecognized_sample) for a file by the signals_full_handle that read_file returned. These are offloaded from read_file's result to keep context lean. The scalar signals in the read_file result resolve the text-vs-image mode for almost every file — call this ONLY for a genuinely ambiguous file where the scalars don't settle it (e.g. to inspect per-page token variance for a typed-over-handwritten hybrid, or the garbage shape to tell handwriting from typed-extraction failure). Default to image on ambiguity rather than fetching.",
         "input_schema": {
