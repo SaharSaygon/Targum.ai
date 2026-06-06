@@ -42,23 +42,27 @@ def _load_skill(name: str) -> str:
     """Read a skill file from skills/ by name (UTF-8, _PROJECT_ROOT-relative).
 
     Each translation tool's system prompt is translate-shared.md concatenated
-    with that tool's own mode skill — see _TEXT_SYSTEM_PROMPT / _IMAGE_SYSTEM_PROMPT.
+    with that tool's own mode skill — see _text_system_prompt / _image_system_prompt.
     """
     return (_PROJECT_ROOT / "skills" / name).read_text(encoding="utf-8")
 
 
-# Load the skill files once when the module is first imported, not on every API
-# call. The files rarely change; no point re-reading them.
-#
-# Each tool's system prompt = the shared translation logic + that tool's mode
-# skill, concatenated shared-FIRST (the mode skill references shared by path, so
-# shared must sit above it in context).
-_TRANSLATION_PROMPT = _load_skill("translate-shared.md")   # shared base
-_TEXT_SKILL = _load_skill("translate-text-pdf.md")         # text-mode craft
-_IMAGE_SKILL = _load_skill("translate-image-pdf.md")       # image-mode craft
+# Skills are loaded PER CALL (per-invocation), NOT once at import — the locked
+# design decision (HISTORY "Day 2 redesign": "Each translation tool loads its
+# skill every call ... lets skill content evolve without restarts"). The skill
+# files are the craft layer; editing one must take effect on the next translation
+# without restarting the process. Each tool's system prompt = the shared
+# translation logic + that tool's mode skill, concatenated shared-FIRST (the mode
+# skill references shared by path, so shared must sit above it in context).
 
-_TEXT_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _TEXT_SKILL
-_IMAGE_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _IMAGE_SKILL
+def _text_system_prompt() -> str:
+    """Build the text-mode system prompt fresh on every call."""
+    return _load_skill("translate-shared.md") + "\n\n" + _load_skill("translate-text-pdf.md")
+
+
+def _image_system_prompt() -> str:
+    """Build the image-mode system prompt fresh on every call."""
+    return _load_skill("translate-shared.md") + "\n\n" + _load_skill("translate-image-pdf.md")
 
 # Maps the semantic type value to the subfolder name inside the course folder:
 # "lecture" → <vault>/<course>/Lectures/<file>_EN.md, etc. "reference" maps to
@@ -185,7 +189,7 @@ def translate_text_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_TEXT_SYSTEM_PROMPT,   # translate-shared.md + translate-text-pdf.md
+        system=_text_system_prompt(),   # translate-shared.md + translate-text-pdf.md (loaded per call)
         messages=[
             {
                 "role": "user",
@@ -283,7 +287,7 @@ def translate_image_pdf(
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
-        system=_IMAGE_SYSTEM_PROMPT,   # translate-shared.md + translate-image-pdf.md
+        system=_image_system_prompt(),   # translate-shared.md + translate-image-pdf.md (loaded per call)
         messages=[{"role": "user", "content": content}],
     )
 

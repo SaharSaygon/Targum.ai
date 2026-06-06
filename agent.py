@@ -1,4 +1,4 @@
-# agent.py — the agent loop, 7 tool schemas, and one handler per tool.
+# agent.py — the agent loop, 8 tool schemas, and one handler per tool.
 import json
 import os
 import time
@@ -24,7 +24,7 @@ ROOT_FOLDER_ID = "1FoM5o24yoBJuvpdtoZ0waJGosS4wef6V"  # Semester ד׳ 2026 cours
 SYSTEM_PROMPT = Path("agent_routing_prompt.md").read_text(encoding="utf-8")
 
 
-# The 7 tool schemas. The `description` is how the model learns what each
+# The 8 tool schemas. The `description` is how the model learns what each
 # tool does — write it for the model, not for you. input_schema is JSON Schema.
 TOOLS = [
     {
