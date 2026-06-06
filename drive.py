@@ -35,8 +35,17 @@ def get_credentials():
     return creds
 
 
-# Built ONCE at import. Every list reuses this — no re-auth mid-run.
-service = build("drive", "v3", credentials=get_credentials())
+# Built lazily on first use (not at import) so `import drive` doesn't trigger
+# OAuth — keeps Drive logic importable without credentials (tests, pre-pass).
+# Built ONCE then reused for every call — no re-auth mid-run.
+_service = None
+
+
+def get_service():
+    global _service
+    if _service is None:
+        _service = build("drive", "v3", credentials=get_credentials())
+    return _service
 
 
 def download_bytes(file_id):
@@ -51,7 +60,7 @@ def download_bytes(file_id):
     the downloaded length to Drive's reported size and re-download on mismatch,
     raising if it never completes — the caller (read_file_logic) turns the raise
     into status:'error' rather than translating a partial file."""
-    meta = service.files().get(
+    meta = get_service().files().get(
         fileId=file_id, fields="size"
     ).execute(num_retries=_NUM_RETRIES)
     size = meta.get("size")
@@ -59,7 +68,7 @@ def download_bytes(file_id):
 
     last_len = None
     for _ in range(_NUM_RETRIES + 1):
-        data = service.files().get_media(fileId=file_id).execute(num_retries=_NUM_RETRIES)
+        data = get_service().files().get_media(fileId=file_id).execute(num_retries=_NUM_RETRIES)
         # expected is None only for non-binary Google files (never our PDFs) —
         # nothing to verify against, so accept.
         if expected is None or len(data) == expected:
@@ -77,7 +86,7 @@ def file_md5(file_id):
     the synced notebook folder). Cheap metadata call, NO byte download. Returns
     None for native Google Docs (Sheets/Docs/Slides have no md5Checksum) — our
     corpus is all binary PDFs, so that's the rare fall-through case."""
-    meta = service.files().get(
+    meta = get_service().files().get(
         fileId=file_id, fields="md5Checksum"
     ).execute(num_retries=_NUM_RETRIES)
     return meta.get("md5Checksum")  # None → native Google file → gate N/A
@@ -91,7 +100,7 @@ def list_folder_children(folder_id):
     children = []
     page_token = None
     while True:
-        resp = service.files().list(
+        resp = get_service().files().list(
             q=query,
             fields="nextPageToken, files(id, name, mimeType)",
             pageSize=100,
