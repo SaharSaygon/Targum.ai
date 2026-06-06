@@ -59,13 +59,6 @@ _IMAGE_SKILL = _load_skill("translate-image-pdf.md")       # image-mode craft
 _TEXT_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _TEXT_SKILL
 _IMAGE_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _IMAGE_SKILL
 
-# agent_routing_prompt.md — routing/traversal logic for the agent loop; loaded
-# here ready for when that loop is built, not wired into these calls. It lives at
-# the repo root (not skills/), so it keeps its own inline load.
-_ROUTING_PROMPT = (
-    _PROJECT_ROOT / "agent_routing_prompt.md"
-).read_text(encoding="utf-8")
-
 # Used by the thin wrappers (translate_one.py, translate_image_pdf.py)
 # to classify files by name into lecture / tutorial / homework / exam.
 # Each tuple is: ([Hebrew and English keywords to look for], type_string)
