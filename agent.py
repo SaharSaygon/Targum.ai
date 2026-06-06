@@ -90,7 +90,6 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "course": {"type": "string"},
-                "filename": {"type": "string", "description": "Output filename (without _EN.md suffix)."},
                 "file_type": {"type": "string", "enum": ["lecture", "tutorial", "homework", "exam"], "description": "Standard type. Omit and use custom_subfolder for non-standard files."},
                 "source_hash": {"type": "string"},
                 "md_cache_handle": {"type": "string", "description": "Handle to the translated markdown returned by a translate tool."},
@@ -100,7 +99,7 @@ TOOLS = [
                 "mode_reasoning": {"type": "string"},
                 "custom_subfolder": {"type": "string", "description": "For non-standard files only. Reuse existing custom names; don't invent near-duplicates."},
             },
-            "required": ["course", "filename", "source_hash", "md_cache_handle", "drive_file_id", "drive_filename", "chosen_mode", "mode_reasoning"],
+            "required": ["course", "source_hash", "md_cache_handle", "drive_file_id", "drive_filename", "chosen_mode", "mode_reasoning"],
         },
     },
     {
