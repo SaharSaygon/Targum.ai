@@ -10,8 +10,9 @@ __pycache__/
 # Virtual environment — too large, recreated via requirements.txt
 .venv/
 
-# Log files
+# Log files & cost ledgers
 *.log
+*.jsonl
 
 # macOS metadata files (for when you switch to Mac)
 .DS_Store

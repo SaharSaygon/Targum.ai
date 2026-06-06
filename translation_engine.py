@@ -11,6 +11,7 @@ write an accurate date_translated frontmatter field without fabricating it.
 import base64
 import io
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,7 @@ import anthropic
 import pypdf
 from pdf2image import convert_from_bytes
 
+import costs
 import manifest
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -129,13 +131,14 @@ def _pil_to_base64_png(image) -> str:
 
 
 # ── Cost calculation ───────────────────────────────────────────────────────────
-# Identical formula for both text and image mode — no separate image-token
-# accounting. Claude Opus 4.8 rates: $5/M input tokens, $25/M output tokens.
-# Vision input tokens are priced the same as text input tokens; Anthropic
-# converts images to tokens internally (~1600 tokens per 512×512 tile).
+# Delegates to costs.tiered_cost — the single cache-aware pricing source (also
+# used by the routing ledger). Translation calls carry no cache tokens, so the
+# tiered formula yields the same value as the old flat input*5+output*25. Vision
+# input tokens are priced like text input; Anthropic tokenises images internally
+# (~1600 tokens per 512×512 tile). Signature kept so callers/manifest are unaffected.
 
 def _calc_cost(usage) -> float:
-    return (usage.input_tokens * 5 + usage.output_tokens * 25) / 1_000_000
+    return costs.tiered_cost(usage, MODEL)
 
 
 # ── Translation functions ──────────────────────────────────────────────────────
@@ -147,6 +150,7 @@ def translate_text_pdf(
     drive_filename: str,
     source_hash: str,
     today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+    on_usage=None,         # optional callback(response, duration_ms) — cost-ledger hook
 ) -> dict:
     """
     Extract text with pypdf, translate via Claude text API.
@@ -177,6 +181,7 @@ def translate_text_pdf(
     # anthropic.Anthropic() reads ANTHROPIC_API_KEY from os.environ automatically.
     # The caller must have run load_dotenv() before calling this function.
     client = anthropic.Anthropic()
+    _t0 = time.perf_counter()
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
@@ -197,7 +202,10 @@ def translate_text_pdf(
         ],
     )
 
+    duration_ms = (time.perf_counter() - _t0) * 1000
     usage = response.usage
+    if on_usage is not None:
+        on_usage(response, duration_ms)
     return {
         "markdown":      response.content[0].text,  # [0] because Claude always returns at least one TextBlock
         "input_tokens":  usage.input_tokens,
@@ -215,6 +223,7 @@ def translate_image_pdf(
     drive_filename: str,
     source_hash: str,
     today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+    on_usage=None,         # optional callback(response, duration_ms) — cost-ledger hook
 ) -> dict:
     """
     Rasterise PDF pages at DPI, translate via Claude vision API.
@@ -270,6 +279,7 @@ def translate_image_pdf(
     print()  # the \r above overwrites the same terminal line; this moves past it
 
     client = anthropic.Anthropic()
+    _t0 = time.perf_counter()
     response = client.messages.create(
         model=MODEL,
         max_tokens=16000,
@@ -277,7 +287,10 @@ def translate_image_pdf(
         messages=[{"role": "user", "content": content}],
     )
 
+    duration_ms = (time.perf_counter() - _t0) * 1000
     usage = response.usage
+    if on_usage is not None:
+        on_usage(response, duration_ms)
     return {
         "markdown":      response.content[0].text,
         "input_tokens":  usage.input_tokens,

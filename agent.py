@@ -1,11 +1,14 @@
 # agent.py — the agent loop, 7 tool schemas, and one handler per tool.
 import json
 import os
+import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
+import costs
 import courses
 import dedup
 import drive
@@ -131,6 +134,17 @@ def handle_list_folder(inp):
 # the bytes back out of here by source_hash; bytes never enter a tool result.
 CONTENT_CACHE = {}
 
+# ── Cost-ledger run context ───────────────────────────────────────────────────
+# Set by __main__ before the loop; stay None/0/[] when agent.py is imported (for
+# tests) or run without a ledger — the translation recorder skips when LEDGER_PATH
+# is None. RUN_ID derives from the same timestamp as logs/agent_<ts>.log so the
+# log and the ledger correlate. LEDGER_ROWS accumulates rows IN MEMORY so the
+# crash-safe summary reports totals without re-reading a possibly-partial file.
+LEDGER_PATH = None
+RUN_ID = None
+CURRENT_TURN = 0
+LEDGER_ROWS = []
+
 
 def read_file_logic(file_id):
     """Download → hash → dedup → detect. Returns a result dict (the handler
@@ -245,11 +259,23 @@ def handle_fetch_signal_detail(inp):
     return json.dumps({"status": "ok", **detail}, ensure_ascii=False)
 
 
-def _translate_logic(inp, engine_fn):
+def _translate_logic(inp, engine_fn, category):
     """Shared core for both translate tools — they differ only in which engine
     function (text vs vision path) they call. Reads the cached source bytes,
     runs the engine, caches the markdown under a handle, returns metadata only.
-    The markdown — like the bytes — never enters the tool result."""
+    The markdown — like the bytes — never enters the tool result.
+
+    `category` is the ledger bucket ("translation_text"/"translation_image"); the
+    engine reports its API usage through the on_usage callback below, and the
+    agent (which holds the run context) writes the ledger row."""
+    def _on_usage(response, duration_ms):
+        # engine has no run context — record here where RUN_ID/turn are known.
+        if LEDGER_PATH is None:
+            return
+        LEDGER_ROWS.append(
+            costs.record_call(LEDGER_PATH, RUN_ID, CURRENT_TURN, category, response, duration_ms)
+        )
+
     source_hash = inp["source_hash"]
     # Cache miss means the agent reached a translate tool without read_file
     # caching this source first. Report it, don't crash the loop.
@@ -270,6 +296,7 @@ def _translate_logic(inp, engine_fn):
             inp["drive_filename"],
             source_hash,
             today_date,
+            on_usage=_on_usage,      # engine emits (response, duration_ms) → ledger
         )
     except RuntimeError as e:
         # Text path's refuse-rather-than-reconstruct backstop: extraction yielded
@@ -316,11 +343,11 @@ def _translate_logic(inp, engine_fn):
 
 
 def handle_translate_text(inp):
-    return json.dumps(_translate_logic(inp, engine.translate_text_pdf), ensure_ascii=False)
+    return json.dumps(_translate_logic(inp, engine.translate_text_pdf, "translation_text"), ensure_ascii=False)
 
 
 def handle_translate_image(inp):
-    return json.dumps(_translate_logic(inp, engine.translate_image_pdf), ensure_ascii=False)
+    return json.dumps(_translate_logic(inp, engine.translate_image_pdf, "translation_image"), ensure_ascii=False)
 
 
 def handle_save_to_vault(inp):
@@ -452,9 +479,17 @@ if __name__ == "__main__":
     run_start = datetime.now(timezone.utc)
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    log_path = logs_dir / f"agent_{run_start.strftime('%Y%m%d_%H%M%S')}.log"
+    run_id = run_start.strftime('%Y%m%d_%H%M%S')   # shared by the run log + the ledger
+    log_path = logs_dir / f"agent_{run_id}.log"
     log_f = open(log_path, "w", encoding="utf-8")
     print(f"Logging this run to {log_path}")
+
+    # cost ledger: one JSON line per LLM call, correlated to this run by run_id.
+    # Set the module-level run context so the translation recorder (_translate_logic,
+    # invoked from the tool handlers) and the routing recorder below both find it.
+    RUN_ID = run_id
+    LEDGER_PATH = logs_dir / f"ledger_{run_id}.jsonl"
+    print(f"Cost ledger: {LEDGER_PATH}")
 
     def log(msg):
         """Append a line to the run log, flushing so a killed run keeps its trail."""
@@ -498,16 +533,19 @@ if __name__ == "__main__":
     auto_named = []      # (hebrew, english)
     refusals = []        # (drive_filename, reason)
     total_cost = 0.0     # sum of cost_usd across translations this run
+    tool_call_counts = Counter()   # Step 4: tool calls by name — where the turns went
 
     turn = 0
     budget_hit = False
     try:
         while True:
             turn += 1
+            CURRENT_TURN = turn      # module global read by the translation recorder
             print(f"\n========== TURN {turn} (tool calls: {tool_calls}/{TOOL_CALL_BUDGET}) ==========")
             log(f"\n===== TURN {turn} | tool_calls={tool_calls}/{TOOL_CALL_BUDGET} =====")
 
             _set_cache_breakpoint(messages)
+            _t0 = time.perf_counter()
             response = client.messages.create(
                 model="claude-opus-4-8",
                 max_tokens=4096,
@@ -515,6 +553,7 @@ if __name__ == "__main__":
                 messages=messages,
                 tools=TOOLS,
             )
+            _routing_ms = (time.perf_counter() - _t0) * 1000
 
             # Cache verification: cache_read should climb turn-over-turn; if it
             # stays 0 a silent invalidator is at work (see claude-api skill).
@@ -525,6 +564,11 @@ if __name__ == "__main__":
                   f"cache r/w {cache_read}/{cache_write}")
             log(f"stop_reason: {response.stop_reason} | usage in={u.input_tokens} out={u.output_tokens} "
                 f"cache_read={cache_read} cache_write={cache_write}")
+
+            # cost ledger: record this routing call with tiered (cache-aware) cost.
+            LEDGER_ROWS.append(
+                costs.record_call(LEDGER_PATH, RUN_ID, turn, "routing", response, _routing_ms)
+            )
 
             # agent reasoning text — the audit surface. Routing rationale, type
             # inheritance, custom_subfolder choices, and skip-floor decisions all
@@ -559,6 +603,7 @@ if __name__ == "__main__":
                         budget_hit = True
                         break
                     tool_calls += 1
+                    tool_call_counts[block.name] += 1   # Step 4: where the turns went
 
                     print(f"[tool call]: {block.name}({block.input})")
                     log(f"[tool call #{tool_calls}] {block.name}({log_trunc(block.input)})")
@@ -635,6 +680,25 @@ if __name__ == "__main__":
         summary.append(f"total tool calls         : {tool_calls}/{TOOL_CALL_BUDGET}"
                        + ("  (BUDGET HIT)" if budget_hit else ""))
         summary.append(f"total translation cost   : ${total_cost:.6f}")
+
+        # --- cost-ledger roll-up: in-memory (NOT re-read from disk) so it still
+        #     emits if the run crashed mid-write. Routing cost is the half the
+        #     per-file manifest never sees. ---
+        ledger_total = sum(r["cost_usd"] for r in LEDGER_ROWS)
+        routing_cost = sum(r["cost_usd"] for r in LEDGER_ROWS if r["category"] == "routing")
+        translation_cost = sum(r["cost_usd"] for r in LEDGER_ROWS
+                               if r["category"].startswith("translation"))
+        tok_in  = sum(r["input_tokens"] for r in LEDGER_ROWS)
+        tok_cw  = sum(r["cache_creation_i_tokens"] for r in LEDGER_ROWS)
+        tok_cr  = sum(r["cache_read_input_tokens"] for r in LEDGER_ROWS)
+        tok_out = sum(r["output_tokens"] for r in LEDGER_ROWS)
+        summary.append(f"TOTAL run cost (ledger)  : ${ledger_total:.6f}  ({len(LEDGER_ROWS)} LLM calls)")
+        summary.append(f"   routing               : ${routing_cost:.6f}")
+        summary.append(f"   translation           : ${translation_cost:.6f}")
+        summary.append(f"tokens in/cw/cr/out      : {tok_in}/{tok_cw}/{tok_cr}/{tok_out}")
+        summary.append("tool call counts         : " + (
+            ", ".join(f"{n}={c}" for n, c in sorted(tool_call_counts.items())) or "(none)"))
+        summary.append(f"cost ledger              : {LEDGER_PATH}")
         summary.append(f"wall-clock duration      : {duration:.1f}s")
         summary.append("skipped / skip-floor     : reasoning-only (no tool call) — "
                        "see per-turn agent reasoning above")
