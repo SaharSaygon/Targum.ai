@@ -9,6 +9,6 @@ The routing agent already classified course and type for this file during routin
 
 Atomic write: write the .md file FIRST. Only if that write succeeds, update translated_log.json. If the disk write fails, the manifest stays clean — no record of a file that isn't on disk.
 
-Manifest upsert: match the existing entry by drive_file_id and update it in place; never append a duplicate (verified L4 behavior). Record model="opus-4-8", the real cost from response.usage, and a vault-RELATIVE md_path (so records survive the vault root moving).
+Manifest upsert: match the existing entry by drive_file_id and update it in place; never append a duplicate (verified L4 behavior). Record model="claude-opus-4-8", the real cost from response.usage, and a vault-RELATIVE md_path (so records survive the vault root moving).
 
 Open every file with explicit UTF-8 encoding (Hebrew appears in both filenames and content).
