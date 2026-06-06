@@ -13,6 +13,7 @@ import courses
 import dedup
 import drive
 import manifest
+import prepass
 import translation_engine as engine
 from pdf_mode_detector import detect_pdf_mode
 
@@ -118,6 +119,20 @@ TOOLS = [
                 "english_name": {"type": "string", "description": "The English course name you auto-assigned."},
             },
             "required": ["hebrew_name", "english_name"],
+        },
+    },
+    {
+        "name": "skip_file",
+        "description": "Record a DELIBERATE decision to NOT translate a file, so future runs drop it for free instead of re-reading and re-deciding it. Use ONLY for a file you have already read (via read_file) and judged not worth translating — e.g. a homework SOLUTION sheet you choose to leave untranslated. This is NOT the cannot-determine skip-floor (genuinely unclassifiable files stay run-log-only — do not call this for those). Writes a 'skipped_permanent' manifest entry keyed by drive_file_id; the next run's deterministic pre-pass drops the file as long as its bytes are unchanged. Requires read_file to have run first (its cached md5 is what lets the pre-pass skip the file without re-downloading).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source_hash": {"type": "string", "description": "Content hash returned by read_file — identifies the cached md5 for this file."},
+                "drive_file_id": {"type": "string"},
+                "drive_filename": {"type": "string", "description": "Original Drive filename."},
+                "skip_reason": {"type": "string", "description": "One line: why this file is deliberately not translated (e.g. 'homework solution sheet')."},
+            },
+            "required": ["source_hash", "drive_file_id", "drive_filename", "skip_reason"],
         },
     },
 ]
@@ -409,6 +424,45 @@ def handle_update_mapping(inp):
     print(f"AUTO-NAMED: {hebrew} → {english} (no prior mapping, agent-assigned)")
     return json.dumps({"status": "mapped", **result}, ensure_ascii=False)
 
+
+def handle_skip_file(inp):
+    """Record a DELIBERATE skip as a skipped_permanent manifest entry (md_path
+    null), so the next run's pre-pass drops this file for free (dedup short-
+    circuit) as long as its bytes are unchanged. Distinct from the skip-floor
+    cannot-determine case, which stays run-log-only with NO manifest entry.
+
+    md5 comes from the read_file cache (path (a)) so the entry carries source_md5,
+    which is exactly what dedup.skip_unchanged matches in the pre-pass. The entry
+    shape mirrors a translated entry with the translation fields nulled/zeroed —
+    same schema the bootstrap writes for skipped_permanent."""
+    source_hash = inp["source_hash"]
+    source_md5 = CONTENT_CACHE.get(f"{source_hash}:md5")
+    entry = {
+        "drive_file_id":       inp["drive_file_id"],
+        "drive_file_name":     inp["drive_filename"],
+        "source_content_hash": source_hash,
+        "md_path":             None,
+        "course":              None,
+        "type":                None,
+        "translated_at":       None,
+        "model":               "skipped_permanent",
+        "skip_reason":         inp["skip_reason"],
+        "cost_usd":            0,
+        "input_tokens":        0,
+        "output_tokens":       0,
+    }
+    # source_md5 only when present (binary PDFs have it; native Google Docs don't).
+    # Without it the pre-pass can't md5-skip the file — it'd fall to the loop, which
+    # still dedups by content hash. So it's an optimization, not a correctness need.
+    if source_md5 is not None:
+        entry["source_md5"] = source_md5
+    entries = manifest.load_log()
+    entries = manifest.upsert_entry(entries, entry)
+    manifest.save_log(entries)
+    return json.dumps({"status": "skipped_permanent",
+                       "drive_file_id": inp["drive_file_id"],
+                       "skip_reason": inp["skip_reason"]}, ensure_ascii=False)
+
 # name → handler. The loop looks the tool up here by its name.
 HANDLERS = {
     "list_folder":         handle_list_folder,
@@ -418,6 +472,7 @@ HANDLERS = {
     "translate_image_pdf": handle_translate_image,
     "save_to_vault":       handle_save_to_vault,
     "update_mapping":      handle_update_mapping,
+    "skip_file":           handle_skip_file,
 }
 
 # ── Prompt caching for the routing loop ───────────────────────────────────────
@@ -507,17 +562,40 @@ if __name__ == "__main__":
     log(f"ROOT_FOLDER_ID = {ROOT_FOLDER_ID}")
     log("Approved course mappings:\n" + mappings_block)
 
-    # --- the conversation starts with one kickoff message. ---
+    # --- deterministic pre-pass: diff the Drive tree against the manifest by md5
+    #     (no downloads, no Opus). The loop receives ONLY new/changed files, not
+    #     the whole tree to walk. Unchanged files (translated, or deliberately
+    #     skipped) drop out — absence from the worklist is the "unchanged" signal. ---
+    print("Running deterministic pre-pass (md5 diff vs manifest)…")
+    worklist, total_scanned = prepass.build_worklist(ROOT_FOLDER_ID)
+    log(f"PRE-PASS: scanned {total_scanned} files; {len(worklist)} new/changed → worklist")
+    for item in worklist:
+        path = "/".join(item["parent_path"] + [item["name"]])
+        log(f"  worklist: {path}  ({item['file_id']})")
+    print(f"Pre-pass: {len(worklist)}/{total_scanned} file(s) need work.")
+
+    # --- kickoff. The agent receives the WORKLIST (files + their parent_path),
+    #     not a root folder to discover. Empty worklist → nothing to do. ---
+    worklist_block = "\n".join(
+        f"- {'/'.join(item['parent_path'] + [item['name']])}  (file_id: {item['file_id']})"
+        for item in worklist
+    )
     kickoff = (
-        f"Start translation run on folder ID {ROOT_FOLDER_ID}. "
-        "Apply the routing policy from the system prompt. "
-        "Use translated_log.json for dedup.\n\n"
+        "A deterministic pre-pass has already diffed the Drive tree against "
+        "translated_log.json. The files below are NEW or CHANGED and need processing "
+        "— you do NOT need to discover the tree or dedup; process exactly this "
+        "worklist.\n\n"
+        "Each item shows its path (course folder / subfolders / filename) and Drive "
+        "file_id. For each item: call read_file on its file_id, classify course + "
+        "type from the path and content, translate in the right mode, then "
+        "save_to_vault. The FIRST path segment is the course folder — match it "
+        "against the approved mappings below (auto-name + update_mapping if "
+        "unmapped). You may list_folder a parent for sibling context if a "
+        "classification needs it.\n\n"
         "## Approved course mappings (from courses.json)\n"
         f"{mappings_block}\n\n"
-        "A course folder whose Hebrew name matches one of these → use the approved "
-        "English name exactly. A course folder NOT in this list → auto-assign an "
-        "English name, use it, persist it via update_mapping, and log the "
-        "auto-naming. Do not skip a course just because it's unmapped."
+        "## Worklist (process every item, then end the run)\n"
+        f"{worklist_block}"
     )
     messages = [
         {"role": "user", "content": kickoff}
@@ -532,13 +610,19 @@ if __name__ == "__main__":
     saved_files = []     # (drive_filename, md_path)
     auto_named = []      # (hebrew, english)
     refusals = []        # (drive_filename, reason)
+    skipped_perm = []    # (drive_filename, skip_reason) — deliberate skips this run
     total_cost = 0.0     # sum of cost_usd across translations this run
     tool_call_counts = Counter()   # Step 4: tool calls by name — where the turns went
 
     turn = 0
     budget_hit = False
+    if not worklist:
+        print("Nothing new — pre-pass found no new/changed files; agent loop skipped.")
+        log("PRE-PASS verdict: nothing new — agent loop skipped.")
     try:
-        while True:
+        # Empty worklist → the loop body never runs (no create() call, no spend);
+        # control still falls through to the finally summary below.
+        while worklist:
             turn += 1
             CURRENT_TURN = turn      # module global read by the translation recorder
             print(f"\n========== TURN {turn} (tool calls: {tool_calls}/{TOOL_CALL_BUDGET}) ==========")
@@ -635,6 +719,10 @@ if __name__ == "__main__":
                         fn = block.input.get("drive_filename", "?")
                         log(f"REFUSED: {fn} — {res.get('reason')}")
                         refusals.append((fn, res.get("reason")))
+                    elif status == "skipped_permanent":
+                        fn = block.input.get("drive_filename", "?")
+                        log(f"SKIPPED (permanent): {fn} — {res.get('skip_reason')}")
+                        skipped_perm.append((fn, res.get("skip_reason")))
                     # accumulate spend from any result carrying cost_data (translated/refused)
                     cd = res.get("cost_data")
                     if isinstance(cd, dict) and "cost_usd" in cd:
@@ -661,19 +749,23 @@ if __name__ == "__main__":
         log(crash_note)
         log(_tb.format_exc())
     finally:
-        # --- end-of-run summary block. Structural roll-up of tool-derived events;
-        #     skip-floor / skipped-file decisions are reasoning-only (the autonomy
-        #     reversal removed the structural skip signal), so they are captured in
-        #     the per-turn reasoning above and the agent's own end-of-run report. ---
+        # --- end-of-run summary block. Structural roll-up of tool-derived events.
+        #     Deliberate skips (skip_file → skipped_permanent) ARE structural now and
+        #     listed below; the cannot-determine skip-floor stays reasoning-only (no
+        #     tool call), captured in the per-turn reasoning and the agent's report. ---
         run_end = datetime.now(timezone.utc)
         duration = (run_end - run_start).total_seconds()
         summary = ["\n===== RUN SUMMARY ====="]
+        summary.append(f"pre-pass scanned/worklist: {total_scanned} scanned → {len(worklist)} new/changed")
         summary.append(f"files translated & saved : {len(saved_files)}")
         for fn, mp in saved_files:
             summary.append(f"   - {fn} → {mp}")
         summary.append(f"auto-named courses       : {len(auto_named)}")
         for he, en in auto_named:
             summary.append(f"   - {he} → {en}")
+        summary.append(f"deliberate skips (perm)  : {len(skipped_perm)}")
+        for fn, reason in skipped_perm:
+            summary.append(f"   - {fn}: {reason}")
         summary.append(f"refusals                 : {len(refusals)}")
         for fn, reason in refusals:
             summary.append(f"   - {fn}: {reason}")

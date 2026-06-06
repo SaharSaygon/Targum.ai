@@ -36,6 +36,23 @@ def md5_gate(entries, drive_file_id, drive_md5):
     return None
 
 
+def skip_unchanged(entries, drive_file_id, drive_md5):
+    """Pre-pass companion to md5_gate, for DELIBERATE skips. True when the manifest
+    has a skipped_permanent entry for this file whose stored source_md5 matches
+    Drive's current md5 — i.e. the agent already chose NOT to translate these exact
+    bytes, so the pre-pass drops the file (no download, no re-evaluation).
+
+    md5_gate can't cover this case: skip entries have md_path=null, and md5_gate
+    requires md_path. md5-only, no I/O. drive_md5 is None (native Google Doc) →
+    False, so the loop still sees the file."""
+    entry = find_by_id(entries, drive_file_id)
+    return bool(
+        drive_md5 is not None and entry is not None
+        and entry.get("model") == "skipped_permanent"
+        and entry.get("source_md5") == drive_md5
+    )
+
+
 def hash_dedup(entries, drive_file_id, source_hash):
     """POST-DOWNLOAD content dedup. Returns an already_done verdict or PROCEED.
 

@@ -92,28 +92,37 @@ def file_md5(file_id):
     return meta.get("md5Checksum")  # None → native Google file → gate N/A
 
 
-def list_folder_children(folder_id):
+def list_folder_children(folder_id, include_md5=False):
     """Direct children of a Drive folder — NOT recursive. The agent walks the
     tree itself via repeated calls. Paginates so 100+ file folders don't truncate.
-    Returns [{name, id, type, mime_type}] where type is "folder" or "file"."""
+    Returns [{name, id, type, mime_type}] where type is "folder" or "file".
+
+    include_md5=True additionally requests md5Checksum and adds it to each child
+    dict (None for folders / native Google files). Used by the deterministic
+    pre-pass (prepass.py) to diff bytes vs the manifest WITHOUT downloading. The
+    agent's list_folder tool leaves it False, so its tool result is unchanged."""
+    fields_files = "id, name, mimeType" + (", md5Checksum" if include_md5 else "")
     query = f"'{folder_id}' in parents and trashed = false"
     children = []
     page_token = None
     while True:
         resp = get_service().files().list(
             q=query,
-            fields="nextPageToken, files(id, name, mimeType)",
+            fields=f"nextPageToken, files({fields_files})",
             pageSize=100,
             pageToken=page_token,
         ).execute(num_retries=_NUM_RETRIES)
         for f in resp.get("files", []):
             mime = f["mimeType"]
-            children.append({
+            child = {
                 "name": f["name"],
                 "id": f["id"],
                 "type": "folder" if mime == FOLDER_MIME else "file",
                 "mime_type": mime,
-            })
+            }
+            if include_md5:
+                child["md5Checksum"] = f.get("md5Checksum")  # None for folders/native
+            children.append(child)
         page_token = resp.get("nextPageToken")
         if not page_token:
             break
