@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from anthropic import Anthropic
 
 import courses
+import dedup
 import drive
 import manifest
 import translation_engine as engine
@@ -145,11 +146,9 @@ def read_file_logic(file_id):
     except Exception as e:
         return {"status": "error", "reason": f"metadata fetch failed: {e}"}
     entries = manifest.load_log()
-    entry = manifest.find_by_id(entries, file_id)
-    if (drive_md5 is not None and entry is not None
-            and entry.get("md_path") and entry.get("source_md5")
-            and entry["source_md5"] == drive_md5):
-        return {"status": "already_done", "md_path": entry["md_path"]}
+    verdict = dedup.md5_gate(entries, file_id, drive_md5)
+    if verdict is not None:
+        return verdict
 
     # 1. download the raw bytes (integrity-checked vs Drive size)
     try:
@@ -161,25 +160,14 @@ def read_file_logic(file_id):
     #    format from manifest, so it compares verbatim against source_content_hash.
     source_hash = manifest.sha256_of(pdf_bytes)
 
-    # 3. dedup against the manifest (keyed by drive_file_id, gated on hash match).
-    #    `entries`/`entry` already loaded for the gate above — reuse them.
-    if entry is not None and entry.get("source_content_hash") == source_hash:
-        if entry.get("md_path"):
-            # already translated (manual or by a prior run)
-            return {"status": "already_done", "md_path": entry["md_path"]}
-        if entry.get("model") == "skipped_permanent":
-            return {"status": "already_done",
-                    "reason": entry.get("skip_reason", "skipped_permanent")}
-        # model == "not_translated_yet" → fall through and process
-
-    # 3b. cross-ID content dedup (fallback): the SAME content already translated
-    #     under ANY other id — a flaky re-download that changed the id, or a true
-    #     duplicate file living in two folders. Skip rather than re-translate.
-    #     Safe now that Step 2's integrity check guarantees source_hash came from
-    #     COMPLETE bytes — without that, this could lock in a truncated translation.
-    for other in entries:
-        if other.get("md_path") and other.get("source_content_hash") == source_hash:
-            return {"status": "already_done", "md_path": other["md_path"]}
+    # 3. dedup against the manifest: by drive_file_id (gated on hash match), with a
+    #    cross-ID content fallback for the same bytes under another id. Pure
+    #    decision — see dedup.hash_dedup. already_done → return; else process fresh.
+    #    Safe now that Step 1's integrity check guarantees source_hash came from
+    #    COMPLETE bytes — without that, cross-ID could lock in a truncated file.
+    verdict = dedup.hash_dedup(entries, file_id, source_hash)
+    if verdict.get("status") == "already_done":
+        return verdict
     # no manifest match, OR the source bytes changed (re-edit) → process fresh
 
     # 4. extraction signals (detector swallows its own pypdf errors → zero-yield;
