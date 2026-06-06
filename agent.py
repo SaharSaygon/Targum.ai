@@ -1,5 +1,4 @@
-# stage1_bare_turn.py — ONE agent turn, no loop. See the raw block shapes.
-# stage2_loop.py — the agent loop with stubbed handlers.
+# agent.py — the agent loop, 7 tool schemas, and one handler per tool.
 import json
 import os
 from datetime import datetime, timezone
@@ -118,8 +117,7 @@ TOOLS = [
     },
 ]
 
-# --- handlers: one per tool. list_folder is real (delegates to drive.py);
-#     the rest are still stubbed. ---
+# --- handlers: one per tool. list_folder delegates to drive.py. ---
 
 def handle_list_folder(inp):
     children = drive.list_folder_children(inp["folder_id"])
