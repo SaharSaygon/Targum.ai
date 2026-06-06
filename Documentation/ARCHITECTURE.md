@@ -87,12 +87,10 @@ finds nothing new, the agent loop never runs.
 ## 4. The tools
 
 `agent.py` defines **8 tools** in `TOOLS`, with a matching `HANDLERS` entry each.
-
-> **Flag:** `agent.py`'s module docstring (line 1) and the `TOOLS` comment
-> (line 27) both still say "**7** tool schemas" — stale; there are 8. Likewise
-> `agent_routing_prompt.md` line 2 enumerates only 7 tools, omitting
-> `fetch_signal_detail` (which the "Mode Selection" section does reference). The
-> code is the authority: 8 tools, 8 handlers.
+The module docstring, the `TOOLS` comment, and `agent_routing_prompt.md`'s tool
+list all enumerate the same 8 (`list_folder`, `read_file`, `fetch_signal_detail`,
+`translate_text_pdf`, `translate_image_pdf`, `save_to_vault`, `update_mapping`,
+`skip_file`).
 
 | Tool | Inputs | Output | Manifest | Role |
 |---|---|---|---|---|
@@ -298,9 +296,12 @@ frontmatter, figure rules, glossary, the refuse-rather-than-reconstruct contract
 with the mode-specific fragment — `skills/translate-text-pdf.md` (reassemble
 fragmented typed math into LaTeX; don't refuse over fragmentation) or
 `skills/translate-image-pdf.md` (vision input; the figures *are* visible). Skills
-are loaded once at module import. `skills/save-to-vault.md` documents the executor
-contract (no re-deciding routing; atomic write; in-place upsert). The agent loop's
-own system prompt is the separate `agent_routing_prompt.md`.
+are loaded **per call** (per-invocation) by `_text_system_prompt()` /
+`_image_system_prompt()`, not once at import — the locked design decision
+(HISTORY "Day 2 redesign"), so editing a skill takes effect on the next
+translation without restarting the process. `skills/save-to-vault.md` documents
+the executor contract (no re-deciding routing; atomic write; in-place upsert). The
+agent loop's own system prompt is the separate `agent_routing_prompt.md`.
 
 ---
 
