@@ -9,7 +9,6 @@ write an accurate date_translated frontmatter field without fabricating it.
 """
 
 import base64
-import hashlib
 import io
 import os
 from datetime import datetime, timezone
@@ -20,6 +19,7 @@ import pypdf
 from pdf2image import convert_from_bytes
 
 import manifest
+from manifest import sha256_of  # re-exported: thin wrappers import it from here
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -84,12 +84,6 @@ TYPE_TO_FOLDER = {
 }
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
-
-def sha256_of(data: bytes) -> str:
-    # We hash the raw PDF bytes (not the filename) so if the same file is
-    # re-uploaded to Drive with a new name or ID, we still detect the duplicate.
-    return "sha256:" + hashlib.sha256(data).hexdigest()
-
 
 def infer_type(filename: str) -> str | None:
     # lower() so we match "Lecture", "LECTURE", "הרצאה" case-insensitively.
