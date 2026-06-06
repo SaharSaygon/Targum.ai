@@ -764,3 +764,185 @@ duration). Duration is measured tight around the API call (excludes pypdf/raster
 - **Consequence:** "routing ≈ 88% of run cost" becomes **measurable per-run** going forward.
   It is still a single hand-computed observation today, not yet a multi-run distribution —
   the ledger is the mechanism that will produce that distribution.
+
+---
+
+## Skip-rule narrowed (broad SKIP keywords reversed) + deterministic pre-pass implemented (2026-06-06)
+
+Two coupled decisions. **Status note:** these are recorded as decided this date; the
+pre-pass module (`prepass.py`) is being built and the skip-clause prompt edit is not yet in
+`agent_routing_prompt.md` as of this entry — design locked, implementation in progress. The
+"implemented" framing is the intent; the repo state is in-progress.
+
+### 1. Skip rule narrowed — broad SKIP keywords REVERSED
+
+The original locked rule — skip if ANY path segment matches פתור / פתרון / תשובות / מענה — is
+**REVERSED**. The original intent was only ever "don't translate my *solved homework*, because
+my handwriting is unreadable"; the broad keyword rule over-reached (it also skipped solved
+exams and tutorials, and anything whose name happened to contain those tokens).
+
+**New rule:** skip only the *solved side* (פתור / פתרון) of a folder the agent classifies as
+**HOMEWORK**. Decided **SEMANTIC, not a literal string match** — explicitly NOT a hardcoded
+`עבודות בית/פתור` path. A literal match would reintroduce the exact lookup-table fragility the
+project rejected (a homework folder named עבודה / מטלה instead would leak through). The skip
+clause lives in `agent_routing_prompt.md` as part of homework classification — **one home**,
+not a standalone global rule.
+
+- **Consequence:** exam and tutorial solution folders are **no longer auto-skipped** — the
+  agent now attempts them. The risk shifts from *fabrication* to **cost**: one paid attempt
+  before a `REFUSED:` on unreadable handwriting. The refuse-rather-than-reconstruct backstop
+  still holds, so handwriting is **not silently fabricated** — it just costs one refused call.
+- **Deliberate homework-solution skips now MUST persist as `skipped_permanent`** so dedup
+  short-circuits them on later runs. This is distinct from the skip-floor (genuine
+  cannot-determine cases), which stays run-log-only with no manifest entry.
+
+### 2. Pre-pass — skip is NOT in it
+
+The deterministic pre-pass does **NOT** apply skip-wins. This **reverses the PHASE2_NOTES #11
+plan line** that put skip-wins in the deterministic harness. Reason: skip is now a *semantic
+homework judgment*, which only Opus can make — it cannot live in skip-blind deterministic code.
+
+The pre-pass stays **naming-blind and skip-blind**: it diffs bytes against the manifest and
+nothing else. Solved-homework files stay cheap because they are **UNCHANGED** (md5/hash dedup
+catches them), **not** because the pre-pass recognizes them as solutions. After the first
+encounter, the `skipped_permanent` manifest entry is what dedup matches on every later run.
+
+### 3. Pre-pass shape (as designed; being built)
+
+New module **`prepass.py`**: recursive Drive tree-walk via repeated `list_folder_children` →
+md5/hash diff against the manifest via `dedup.py` (pure) → a worklist of
+`{file_id, name, parent_path}` for **new/changed files only**. Unchanged files are absent —
+**absence is the signal**. No `anthropic` import; import-clean like `dedup.py` / `costs.py`.
+
+The agent loop and its 6 tools are **unchanged** — the kickoff now hands the loop the worklist
+instead of a root folder ID; an **empty worklist → end run**. New courses: the pre-pass does
+**NOT** auto-name; new-course files simply enter the worklist as new, and the loop auto-names +
+`update_mapping` as before.
+
+### 4. Data note — the 88% premise was run-composition-dependent
+
+The justification "routing ≈ 88% of cost" was an **n=1 artifact** of a *1-new-file* run. The
+2026-06-06 verification run (**7 new files**) split routing/translation **~50/50** ($1.958 /
+$1.954 of $3.91 total). The percentage moves with how many files are new per run — it is **NOT
+a stable metric**, so the earlier "confirm 88% across a few runs" data gate is moot as stated.
+
+The **defensible** justification is **absolute routing-$ on a near-static tree**: ~$2/run, with
+~93% of read volume being dedup hits (7 new of 102 reads) — almost all of it re-derivation the
+pre-pass eliminates. The pre-pass is built on the learning-project rationale + this
+absolute-cost framing, **not** the moving percentage.
+
+---
+
+## Deterministic routing pre-pass built + skip-rule narrowed (2026-06-06)
+
+Updates the prior same-day entry ("Skip-rule narrowed … + deterministic pre-pass implemented"),
+which recorded these as decided/in-progress. They are now **BUILT** (verified; uncommitted,
+pending review at time of writing). This entry records the as-built model — which differs from
+some earlier drafts: there is **no "attempt-everything / REFUSED-backstop"** and **no
+"skip-wins in the pre-pass"**; neither was built. The accurate model follows.
+
+### Pre-pass — as built
+
+New module **`prepass.py`**: deterministic, pure, **no `anthropic` import** — import-clean like
+`dedup.py` / `costs.py`. Three functions: `walk_tree` (recursive, builds `parent_path`, takes an
+injected lister so it's testable), `diff_tree` (pure md5 diff against the manifest via `dedup`),
+`build_worklist` (wires real Drive + manifest). It recursively walks the Drive tree via
+`list_folder_children` (**md5 metadata only — no byte downloads**), diffs each file against the
+manifest via `dedup.py`, and emits a worklist of **only new/changed files**. Unchanged files
+(including already-marked skips) are **ABSENT — absence is the signal**. The agent loop and its
+tools are unchanged; the kickoff hands the loop the **worklist** instead of a root folder ID
+(`while True` → `while worklist`). **Empty worklist → end run, no spend** (the summary still
+emits). New courses: the pre-pass does NOT auto-name; new-course files enter the worklist as
+new and the loop auto-names + `update_mapping` as before.
+
+### Skip is the agent's decision on new files, persisted via the manifest
+
+There is **no skip rule in the pre-pass code** and **no broad keyword rule**. How it works:
+- A file already marked `skipped_permanent` is **dropped by the pre-pass** — never reaches the loop.
+- A NEW file the agent judges should be skipped — specifically a **solution segment (stem פתר,
+  e.g. פתור / פתרון) nested under a homework folder (stem עבוד, e.g. עבודות / עבודות בית)**, i.e.
+  an unreadable handwritten solution — the agent calls **`skip_file`** to record it
+  `skipped_permanent`. Next run the pre-pass drops it for free.
+- This is the **ONLY** skip-by-pattern case, and it requires **BOTH stems together** (an
+  עבוד-homework ancestor AND a פתר-solution segment).
+
+**REVERSAL.** The old locked broad keyword-skip — match פתור / פתרון / תשובות / מענה in **any**
+path segment → skip — is **REVERSED**. Original intent was only "don't translate my unreadable
+handwritten *homework solutions*"; the broad rule over-reached onto non-solution files (any
+name containing those tokens, solved exams/tutorials, etc.). Solution-like names **outside** the
+עבוד-homework context now translate normally.
+
+### Design path (honest)
+
+Skip was briefly considered (a) as a deterministic path rule inside the pre-pass, and (b) as an
+agent-mode readability judgment at translate time. Both were dropped. Resolved model: **the
+agent decides skip on new files, the manifest persists it (`skipped_permanent`), and the
+pre-pass drops marked files** — the simplest model, with **no skip logic in the pre-pass code**.
+
+### New tool + supporting changes
+
+- **`skip_file`** (new tool) — writes a `skipped_permanent` manifest entry **with `source_md5`**
+  (matching the bootstrap schema) for a deliberate agent skip. **Tool count 7 → 8.** Distinct
+  from the **skip-floor** (genuine cannot-determine → run-log only, **no** manifest entry), which
+  is unchanged.
+- **`drive.list_folder_children(folder_id, include_md5=False)`** — opt-in `md5Checksum`. The
+  agent's `list_folder` result is **unchanged** (default `False`); the pre-pass passes `True`.
+- **`dedup.skip_unchanged`** — pure md5-only companion (to `md5_gate`) for the deliberate-skip
+  path; `md5_gate` / `hash_dedup` untouched.
+- **`test_prepass.py`** — 7 tests (walk recursion / `parent_path`; diff exclude-unchanged /
+  include-new-changed / skip-reupload; `skip_unchanged` primitive). `test_dedup.py` still 16/16,
+  no regression.
+
+### Data note + first live run
+
+The "routing ≈ 88%" premise was an **n=1 artifact**; the 2026-06-06 verification run (7 new
+files) split routing/translation **~50/50** ($1.958 / $1.954 of $3.91). The percentage moves
+with run composition — **not stable**. Defensible justification: **absolute routing-$ on a
+near-static tree** (~$2/run, almost all re-derivation over unchanged files), which the pre-pass
+eliminates by diffing deterministically.
+
+First live pre-pass run (read-only, md5 only): **scanned 117 files → 15 in the worklist** (102
+unchanged correctly excluded). Caveat: the **2 existing bootstrap `skipped_permanent` entries
+lack `source_md5`** (e.g. `Algo262_Ass2_AnswerSheet`), so `skip_unchanged` can't drop them yet —
+they **re-enter the worklist once**; after a re-skip via `skip_file` (which stores `source_md5`)
+they drop for free on every later run.
+
+---
+
+## First live committed worklist run (`agent_20260606_203523`) (2026-06-06)
+
+The first full pre-pass-driven run after committing `prepass.py` + `skip_file`. The pre-pass ran
+live against Drive (md5 metadata only) and handed the loop a worklist; this is the first run where
+the whole new-files-only path executed end-to-end on real data and committed state.
+
+### Run numbers
+
+- Pre-pass: **scanned 121 files → 19 worklist** (102 unchanged excluded, no byte reads).
+- Loop outcomes: **8 translated + saved** (4 clean typed homework solutions via text mode + 4
+  Linear-Systems tutorials), **10 deliberate skips** via `skip_file` (handwritten פתר solutions
+  nested under עבוד homework, incl. 3 Algo answer sheets), **1 `already_done`**
+  (`Algo262_Ass1_AnswerSheet`).
+- Tool calls: **45 / 200** — read_file 19, skip_file 10, translate_text_pdf 8, save_to_vault 8,
+  **0 auto-named**.
+- Cost: **$3.40** — routing **$0.66** / translation **$2.73**, 33 LLM calls. Wall-clock **~18 min**.
+- **0 refusals, 0 errors.**
+
+### Reconcile finding — the 1 `already_done`
+
+`Algo262_Ass1_AnswerSheet` entered the worklist as new (no `source_md5` to drop it in the pre-pass)
+but came back **`already_done`** inside the loop: in-loop `hash_dedup` matched a bootstrap manifest
+entry by **content hash**, short-circuiting before any translate spend. So the 19 reads decompose
+cleanly as **8 translated + 10 skipped + 1 already-done**. Resolved — now that it carries
+`source_md5`, the pre-pass will drop it before the loop next run.
+
+### md5 self-heal CONFIRMED
+
+The `skipped_permanent` set went from md5-partial to **11/11 md5-backed** after this run plus the
+`Ass1` backfill (commit `5e87909`). The earlier "2 bootstrap entries lack `source_md5` → re-enter
+once" caveat is **closed** — every skip now drops for free in the pre-pass.
+
+### Routing-cost win, measured
+
+Routing was **$0.66** on a 19-file delta — versus the prior **~$2** full-tree re-walk that
+re-derived routing over the whole near-static tree. That gap is the pre-pass win, now measured on a
+committed run rather than projected.

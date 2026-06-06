@@ -88,22 +88,31 @@ with `source_md5`; backfill audit found **0 new stale entries** and the **one 40
 dangling entry** (left in place harmlessly). Cross-links to #4 (this IS its "verify md5"
 follow-on) and #6 (the backfill doubled as a one-off audit run).
 
-### 11. Deterministic routing pre-pass — **Open — next architectural work, unblocked, pending data + cron** *(prereqs met 2026-06-06)*
+### 11. Deterministic routing pre-pass — **BUILT (2026-06-06, uncommitted pending review)** *(was Open)*
 
-**Prerequisites now MET** (both landed in the 2026-06-06 optimization pass, HISTORY): lazy
-Drive init (`import drive` no longer triggers OAuth) and the dedup-decision extraction into
-`dedup.py` — pure, anthropic-free verdict functions the pre-pass can call without an API key
-or the agent loop. Building the pre-pass no longer waits on a refactor.
+**Built** as `prepass.py` — pure, no `anthropic` import, import-clean like `dedup.py` /
+`costs.py`. `walk_tree` (recursive, `parent_path`, injected lister) · `diff_tree` (pure md5 diff
+via `dedup`) · `build_worklist` (wires real Drive + manifest). Walks the tree via
+`list_folder_children` (md5 metadata only, no downloads), diffs against the manifest, emits a
+worklist of new/changed files only — unchanged (incl. marked skips) absent. Agent loop + tools
+unchanged; kickoff hands the loop the worklist (`while True` → `while worklist`); empty worklist
+→ end run, no spend. New tool `skip_file` (records `skipped_permanent` with `source_md5`); tool
+count 7 → 8. Supporting: `drive.list_folder_children(include_md5=False)`, `dedup.skip_unchanged`,
+`test_prepass.py` (7 tests), `test_dedup.py` 16/16. Prerequisites (lazy Drive, `dedup.py`) had
+landed in the earlier 2026-06-06 optimization pass.
 
-It stays **deferred** on two gates, not on missing groundwork:
-- **DATA-gated.** The justification ("routing ≈ 88% of run cost") is still **one hand-computed
-  observation**. The new cost ledger (#8) is the mechanism — let it log a few real runs and
-  confirm the split as a distribution before building on the number.
-- **TIMING-gated.** The win recurs with run frequency — fully justified alongside the Phase 3
-  cron (~180 runs/yr), marginal under rare manual runs. Build when cron is imminent.
-
-Don't read "Open" as low-priority: this is the **next** architectural work; only data
-confirmation and cron timing stand between it and a build.
+- **DATA gate — RESOLVED (premise was unstable, not confirmed).** The justification
+  "routing ≈ 88% of run cost" was an **n=1 artifact** of a 1-new-file run. The 2026-06-06
+  verification run (7 new files) split routing/translation **~50/50** ($1.958 / $1.954 of
+  $3.91). The percentage moves with run composition — it is NOT a stable metric, so
+  "confirm 88% across a few runs" is moot. Reframed to **absolute routing-$ on a near-static
+  tree** (~$2/run, almost all re-derivation over unchanged files) — which the pre-pass
+  eliminates by diffing deterministically. First live run: **scanned 117 → 15 worklist** (102
+  unchanged excluded). The 2 bootstrap `skipped_permanent` entries lack `source_md5`, so they
+  re-enter the worklist once; after re-skip via `skip_file` (stores `source_md5`) they drop for
+  free. See HISTORY "Deterministic routing pre-pass built + skip-rule narrowed (2026-06-06)".
+- **TIMING.** The win recurs with run frequency — fully justified alongside the Phase 3
+  cron (~180 runs/yr), marginal under rare manual runs.
 
 The routing half of run cost now dominates: a 2026-06-05 test run that translated one new
 file cost **~$1.22 total — $0.154 translation, $1.07 routing** (24 turns / ~130 tool
@@ -120,10 +129,19 @@ Canonical fix (world-knowledge convergent): **thin deterministic harness, LLM on
 delta.** Established agent-architecture guidance is uniform — fixed/predictable sequences
 belong in deterministic pipelines; the agent loop is for steps whose path can't be
 predicted in advance. Split the work:
-- **Deterministic code (≈free):** walk the tree, md5-diff against the manifest, apply
-  skip-wins on folder names (פתור/פתרון/תשובות), and re-apply the already-recorded
-  classification for any file whose hash matches. Emit a worklist of only the files that
-  genuinely need a decision.
+- **Deterministic code (≈free):** walk the tree, md5/hash-diff against the manifest via
+  `dedup.py`, and emit a worklist of only new/changed files. Two clauses from the original plan
+  are struck:
+  - ~~apply skip-wins on folder names (פתור/פתרון/תשובות)~~ — **REVERSED 2026-06-06: skip-wins
+    is NOT in the pre-pass.** Skip is now a *semantic homework-only* judgment (solved side of a
+    HOMEWORK folder), which only the agent loop can make; the pre-pass stays skip-blind.
+  - ~~re-apply the already-recorded classification for any file whose hash matches~~ —
+    **STRUCK 2026-06-06 (vestigial):** a hash-match is UNCHANGED → absent from the worklist →
+    never re-saved, so there is nothing to re-apply. The resolved model is simpler than #11
+    originally described: **unchanged = absent, full stop** — no re-classification step.
+  Unchanged files (including deliberately-skipped solved homework, once recorded
+  `skipped_permanent`) are absent — **absence is the signal**. See HISTORY "Skip-rule
+  narrowed … (2026-06-06)".
 - **Agent loop (Opus 4.8, delta only):** receives the worklist — new/changed files whose
   Hebrew name/content doesn't match a known pattern, plus new-course auto-naming. The
   existing loop and its 6 tools don't change; they just receive a 1-file worklist instead
