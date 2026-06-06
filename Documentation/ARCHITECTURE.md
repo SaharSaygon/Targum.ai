@@ -1,445 +1,333 @@
 # ARCHITECTURE
 
-Full architecture scan, grounded in the actual source (not STATUS/HISTORY/plan).
-Where docs and code disagree, the code is authoritative and the gap is flagged in
-§8. **Read-only pass — nothing was changed.**
-
-Scope: the 11 project `.py` files (all git-tracked; no untracked `.py` exist),
-plus the routing prompt, the four skills, `courses.json`, and the live
-`translated_log.json`. The `.venv/` tree is excluded.
+A state map of the system as it exists in the code today. Present tense, current
+state only — reversed decisions and the path here live in `HISTORY.md`, not here.
+Where the live code disagrees with what a reader would expect from comments or the
+other docs, this file flags it inline rather than smoothing it over.
 
 ---
 
-## 1. Module map
+## 1. System overview
 
-Internal package (no `__init__.py`; flat module imports). "Imports (sibling)" lists
-only project-local imports, not stdlib/third-party.
-
-### `agent.py` — the agent loop + the 7 tool schemas + their handlers
-The only orchestrator. Defines `TOOLS` (7 schemas), the per-tool handlers, the
-in-memory `CONTENT_CACHE`, prompt-cache plumbing, and the `__main__` loop.
-- **Imports (sibling):** `courses`, `drive`, `manifest`, `translation_engine as engine`, `from pdf_mode_detector import detect_pdf_mode`
-- Module-level: `client = Anthropic()`, `ROOT_FOLDER_ID` (hard-coded Drive id), `SYSTEM_PROMPT = Path("agent_routing_prompt.md").read_text(...)`, `TOOLS`, `CONTENT_CACHE = {}`, `HANDLERS`, `SYSTEM_CACHED`.
-- **Functions:**
-  - `handle_list_folder(inp) -> str` — JSON-dumps `drive.list_folder_children`.
-  - `read_file_logic(file_id) -> dict` — download→md5-gate→hash→dedup→detect; never raises into the loop (failures become `{"status":"error"}`).
-  - `handle_read_file(inp) -> str` — JSON wrapper over `read_file_logic`.
-  - `handle_fetch_signal_detail(inp) -> str` — returns offloaded `per_page`+`unrecognized_sample` by handle from `CONTENT_CACHE`.
-  - `_translate_logic(inp, engine_fn) -> dict` — shared core for both translate tools; reads cached bytes, runs the engine, caches markdown+cost, returns metadata only.
-  - `handle_translate_text(inp) -> str` / `handle_translate_image(inp) -> str` — JSON wrappers binding `_translate_logic` to `engine.translate_text_pdf` / `engine.translate_image_pdf`.
-  - `handle_save_to_vault(inp) -> str` — reads md/cost/signals/md5 from cache, delegates to `engine.save_to_vault`.
-  - `handle_update_mapping(inp) -> str` — delegates to `courses.update_mapping`; prints a loud `AUTO-NAMED:` audit line.
-  - `_set_cache_breakpoint(messages) -> None` — moves the conversation-prefix `cache_control` marker onto the last message's last block.
-  - `__main__` block — builds kickoff, opens run log, runs the budget-guarded loop, prints crash-safe summary.
-- **Dead/quirky code:** Lines 1–2 are a stale top-of-file comment naming files that don't exist (`stage1_bare_turn.py`, `stage2_loop.py`). The handler docstrings (lines 121–122) still say "the rest are still stubbed" — **untrue**; every handler is real. `handle_update_mapping` prints `AUTO-NAMED:` (line 395) **and** the loop re-derives and logs the same event at lines 593–597 → the auto-name is announced twice (one to stdout, one to the run-log accumulator).
-
-### `translation_engine.py` — core translation + vault executor (no loop, no tools)
-Stateless functions shared by the agent and the manual wrappers.
-- **Imports (sibling):** `manifest`
-- Module-level: `MODEL = "claude-opus-4-8"`, `DPI = 200`, skill files loaded **once at import** (`_TRANSLATION_PROMPT`, `_TEXT_SKILL`, `_IMAGE_SKILL`, composed into `_TEXT_SYSTEM_PROMPT`/`_IMAGE_SYSTEM_PROMPT`), `_ROUTING_PROMPT` (loaded but **unused here** — dead read), `_TYPE_KEYWORDS`, `TYPE_TO_FOLDER`.
-- **Functions:**
-  - `sha256_of(data: bytes) -> str` — `"sha256:" + hexdigest`. (Duplicate of `manifest.sha256_of`.)
-  - `infer_type(filename: str) -> str | None` — keyword→type; **only the manual wrappers call it** (the agent passes `file_type` explicitly).
-  - `vault_output_path(vault_path, course_english, type_value, drive_filename, custom_subfolder=None) -> Path` — pure path build; raises `ValueError` on unknown type with no `custom_subfolder`.
-  - `_pil_to_base64_png(image) -> str`
-  - `_calc_cost(usage) -> float` — `(in*5 + out*25)/1e6` (Opus 4.8 rates, hard-coded).
-  - `translate_text_pdf(pdf_bytes, course_english, drive_file_id, drive_filename, source_hash, today_date) -> dict` — pypdf extract; raises `RuntimeError` if `<50` chars; Claude text call; returns `{markdown,input_tokens,output_tokens,cost_usd,model,mode="text"}`.
-  - `translate_image_pdf(...same sig...) -> dict` — pdf2image rasterise @200 DPI; Claude vision call; `mode="image"`.
-  - `save_to_vault(course_english, type_value, markdown, drive_file_id, drive_filename, source_hash, cost_data, chosen_mode, mode_reasoning, vault_path, detection_signals=None, source_md5=None, custom_subfolder=None) -> dict` — atomic `.md` write **then** manifest upsert; returns `{"status":"saved","md_path":...}`.
-- **Note:** `drive_file_id` is a declared parameter of both `translate_*` functions but is **unused** inside them (agent passes `""`).
-
-### `manifest.py` — sole owner of `translated_log.json` I/O
-- **Imports (sibling):** none.
-- `sha256_of(data) -> str`; `load_log() -> list[dict]`; `save_log(entries) -> None` (atomic via `.tmp`+`os.replace`); `find_by_id(entries, drive_file_id) -> dict|None`; `upsert_entry(entries, entry) -> list[dict]` (in-place replace by `drive_file_id`, else append).
-- Note `LOG_PATH` uses `.with_suffix(".tmp")` so the temp file is `translated_log.tmp`.
-
-### `drive.py` — all Google Drive I/O for the agent loop
-- **Imports (sibling):** none. Builds `service` **once at import** (auths on import → side effect on `import drive`).
-- `get_credentials()`; `download_bytes(file_id) -> bytes` (size-verified, re-downloads on short read, raises `IOError` if never complete); `file_md5(file_id) -> str|None` (metadata-only, `None` for native Google files); `list_folder_children(folder_id) -> list[dict]` (paginated, non-recursive, `{name,id,type,mime_type}`).
-
-### `courses.py` — sole owner of `courses.json` I/O
-- **Imports (sibling):** none.
-- `load_courses() -> dict` (flat `{hebrew: english}`); `update_mapping(hebrew_name, english_name) -> dict` (atomic `.tmp`+`os.replace`, returns `{"hebrew_name","english_name"}`).
-
-### `pdf_mode_detector.py` — pure extraction-signal reporter (NO verdict)
-- **Imports (sibling):** none. `pypdf` imported lazily inside `detect_pdf_mode`.
-- `_is_math_token(token) -> bool`; `_is_recognizable(token) -> bool`; `_analyze_text(text) -> dict`; `detect_pdf_mode(pdf_bytes) -> dict`.
-- Module constants `_RECOGNIZABILITY_THRESHOLD`, `_MAX_GARBAGE_RUN_THRESHOLD`, `_MIN_TEXT_CHARS` are **deliberately dead** — old verdict cutoffs kept for reference, applied nowhere.
-- `__main__` is a self-contained unit-test harness (`_check`, `_check_tok`).
-
-### Manual / bootstrap scripts (not part of the agent loop)
-- **`translate_one.py`** — manual single-file **text-mode** translation. Has `DRIVE_FILE_ID`/`COURSE_HEBREW` to fill in. **Imports (sibling):** `from manifest import load_log, save_log`, `from translation_engine import infer_type, sha256_of, translate_text_pdf`. Carries its **own** copies of `get_drive_credentials`/`download_bytes` (duplicates `drive.py`). Writes the manifest **directly** (remove-then-append, not `manifest.upsert_entry`) and writes the `.md` **directly to the course root** (no type subfolder) — a different path model than the agent's.
-- **`translate_image_pdf.py`** — manual single-file **image-mode** twin of the above; same duplication. Its `DRIVE_FILE_ID` (`...JQNjuP`) is one char longer than `translate_one.py`'s (`...JQNju`) — likely a copy-paste artifact. Does its own hash-dedup against the log before translating.
-- **`list_drive.py`** — standalone folder lister (prints name+id). Builds its own creds/service. Not imported anywhere.
-- **`hello_world.py`** — smoke test; one Sonnet 4.6 call. Not imported anywhere. Last touched 2026-04-20 (oldest file).
-- **`init_translation_log.py`** (549 LOC) — one-shot bootstrap: walks Drive + vault, fuzzy-matches existing `.md` to Drive PDFs, rewrites frontmatter, and seeds `translated_log.json` with `manual` / `not_translated_yet` / `skipped_permanent` entries. **Imports (sibling):** none (self-contained; predates `manifest.py`). Interactive (`prompt_type`, `_prompt_skip_reason`). Not imported by any module. Source of the legacy manifest shapes (see §5).
+The system translates a tree of Hebrew course PDFs in Google Drive into English
+Markdown notes in an Obsidian vault. A single run has two stages. First a
+**deterministic pre-pass** (`prepass.py`) walks the Drive tree and diffs it
+against the manifest (`translated_log.json`) by Drive's md5 checksum — metadata
+only, no downloads, no LLM — producing a **worklist** of only the new or changed
+files. Then a **semantic agent loop** (`agent.py`) is handed that worklist and,
+for each file, calls Claude (Opus 4.8) as a tool-using agent: it reads the file,
+classifies its course and type from the path and content, picks a text-vs-image
+translation mode from extraction signals, translates, and saves the result to the
+vault while recording it in the manifest. The deterministic stage decides *what is
+new*; the agent decides *what it is and how to translate it*. If the pre-pass
+finds nothing new, the agent loop never runs.
 
 ---
 
-## 2. Tool layer
+## 2. Execution flow, end to end
 
-Schemas live in `agent.py:TOOLS` (lines 25–119). Dispatch table `HANDLERS` (lines
-399–407). The architecture is **thin wrapper in `agent.py` → fn-by-concern in a
-sibling module**, and it holds for every tool. Confirmed split.
+`agent.py`'s `__main__` block is the entry point. The flow:
 
-| Schema name | Input params (required ✚ / optional) | Handler (`agent.py`) | Underlying fn (module) |
-|---|---|---|---|
-| `list_folder` | ✚`folder_id` | `handle_list_folder` | `drive.list_folder_children` |
-| `read_file` | ✚`file_id` | `handle_read_file` → `read_file_logic` | `drive.file_md5`, `drive.download_bytes`, `manifest.load_log/find_by_id`, `manifest.sha256_of`, `pdf_mode_detector.detect_pdf_mode` |
-| `fetch_signal_detail` | ✚`handle` | `handle_fetch_signal_detail` | reads `CONTENT_CACHE` (no module fn) |
-| `translate_text_pdf` | ✚`source_hash`,`course`,`drive_filename`,`mode_reasoning` | `handle_translate_text` → `_translate_logic` | `engine.translate_text_pdf` |
-| `translate_image_pdf` | ✚`source_hash`,`course`,`drive_filename`,`mode_reasoning` | `handle_translate_image` → `_translate_logic` | `engine.translate_image_pdf` |
-| `save_to_vault` | ✚`course`,`filename`,`source_hash`,`md_cache_handle`,`drive_file_id`,`drive_filename`,`chosen_mode`,`mode_reasoning`; opt `file_type`(enum lecture/tutorial/homework/exam),`custom_subfolder` | `handle_save_to_vault` | `engine.save_to_vault` → `vault_output_path`, `manifest.load_log/upsert_entry/save_log` |
-| `update_mapping` | ✚`hebrew_name`,`english_name` | `handle_update_mapping` | `courses.update_mapping` |
-
-"The 6 loop tools + `fetch_signal_detail`" = 7 total; that matches `TOOLS`.
-
-**Schema-vs-handler mismatch (flag):** the `save_to_vault` schema requires
-`filename`, but `handle_save_to_vault` **never reads `inp["filename"]`** — the
-output stem is derived from `drive_filename` inside `vault_output_path`
-(`Path(drive_filename).stem`). `filename` is a required-but-ignored field.
-
----
-
-## 3. Agent loop (`agent.py` `__main__`, lines 451–659)
-
-**Message-history construction.** `messages` starts as a single `user` kickoff
-string (line 500). On each `tool_use` turn the assistant `response.content` is
-appended **verbatim** as one `assistant` message (must keep the `tool_use`
-blocks), then all tool results are appended as **one** `user` message whose
-`content` is the list of `tool_result` blocks (lines 558, 611–618).
-
-**Kickoff (lines 489–499) + `courses.json` injection.** `COURSES =
-courses.load_courses()` → rendered as a `mappings_block` of `- hebrew → english`
-lines → embedded into the kickoff under a `## Approved course mappings (from
-courses.json)` heading, with explicit instructions: matched folder → use approved
-name; unmatched folder → auto-name, persist via `update_mapping`, log it, don't
-skip. The block is also printed and written to the run log.
-
-**stop_reason handling (lines 551–620).**
-- `end_turn` → print/log "RUN COMPLETE", `break`.
-- `tool_use` → append assistant turn, run each `tool_use` block, append results, loop.
-- Any other stop_reason → falls through (no append) and the `while True` re-issues `create()` with unchanged `messages` (no explicit handling for `max_tokens`/`pause_turn`).
-
-**Tool dispatch (lines 562–615).** For each `tool_use` block: budget check first,
-increment counter, look up `HANDLERS[block.name]` (no `KeyError` guard — an unknown
-tool name would raise into the outer `except`), call handler, parse result for
-audit events (`update_mapping`→`mapped`, `saved`, `refused`, and any `cost_data`).
-`list_folder` returns a JSON **array**, so results are `json.loads`'d defensively
-and non-dict results coerced to `{}`.
-
-**200-call budget (lines 506–507, 566–574).** `TOOL_CALL_BUDGET = 200`, counting
-**tool calls, not turns**. The check sits **before** each dispatch, so a turn that
-batches many calls still stops at exactly 200; `budget_hit` breaks the inner loop,
-appends the partial results, then breaks the outer loop.
-
-**Run logger (lines 462–486).** Per-run file at `logs/agent_<UTC-ts>.log`
-(gitignored). `log()` flushes every line (killed run keeps its trail);
-`log_trunc(value, limit=500)` caps long values. Agent reasoning text blocks are
-logged **in full** (the audit surface; skips produce no tool call).
-
-**Crash-safe summary (lines 517, 623–658).** The whole loop is wrapped in
-`try/except/finally`. Any exception is logged with traceback; the `finally` block
-**always** prints+logs the RUN SUMMARY (files saved, auto-named, refusals, total
-tool calls, total cost, wall-clock, skip-floor note) and closes the log. Summary
-accumulators (`saved_files`, `auto_named`, `refusals`, `total_cost`) are populated
-from parsed tool results, not from the model's prose.
-
-**Prompt-caching params.** Two ephemeral breakpoints (system+tools, and the
-moving conversation prefix). No explicit `ttl` is set (SDK default). The system
-block, verbatim (lines 418–422):
-
-```python
-SYSTEM_CACHED = [{
-    "type": "text",
-    "text": SYSTEM_PROMPT,
-    "cache_control": {"type": "ephemeral"},
-}]
-```
-
-The moving prefix breakpoint, verbatim (lines 439–447):
-
-```python
-content = messages[-1]["content"]
-if isinstance(content, str):
-    # kickoff turn: wrap the string in a text block so it can carry the marker
-    messages[-1]["content"] = [{
-        "type": "text", "text": content,
-        "cache_control": {"type": "ephemeral"},
-    }]
-elif isinstance(content, list) and content and isinstance(content[-1], dict):
-    content[-1]["cache_control"] = {"type": "ephemeral"}
-```
-
-`_set_cache_breakpoint` first strips every prior `cache_control` from dict blocks
-(keeps within the 4-breakpoint cap; only 2 are used). Assistant blocks are SDK
-objects (not dicts) and are skipped. The `create()` call (lines 524–530) passes
-`model="claude-opus-4-8"`, `max_tokens=4096`, `system=SYSTEM_CACHED`,
-`messages`, `tools=TOOLS`. Cache health is logged each turn via
-`cache_read_input_tokens` / `cache_creation_input_tokens`.
+1. **Load config.** Read `courses.json` (Hebrew→English course names) via
+   `courses.load_courses()` and render it into a mappings block for the kickoff.
+2. **Open run artifacts.** Create `logs/agent_<run_id>.log` (full audit trail) and
+   set `LEDGER_PATH = logs/ledger_<run_id>.jsonl` (per-LLM-call cost ledger).
+   `run_id` is one timestamp shared by both files so they correlate.
+3. **Pre-pass.** `prepass.build_worklist(ROOT_FOLDER_ID)`:
+   - `walk_tree` recurses the Drive tree via
+     `drive.list_folder_children(..., include_md5=True)`, collecting every file
+     with its `parent_path` and Drive `md5Checksum`. **No byte downloads.**
+   - `diff_tree` (pure) compares each file against the manifest entries: a file is
+     **excluded** from the worklist iff `dedup.md5_gate` fires (already translated,
+     md5 unchanged) **or** `dedup.skip_unchanged` fires (deliberately skipped, md5
+     unchanged). Everything else — no entry, changed md5, or a
+     `not_translated_yet` placeholder with no md5 — goes on the worklist.
+   - Returns `(worklist, total_scanned)`.
+4. **Empty worklist ends the run.** If the worklist is empty, the loop body never
+   executes (no `create()` call, no spend) and control falls straight to the
+   summary.
+5. **Kickoff.** The worklist (each item's path + Drive `file_id`) and the course
+   mappings are formatted into one user message. The agent is told the tree is
+   *already diffed* — it works the list, it does not discover or dedup.
+6. **Agent loop.** Until the worklist is exhausted (`end_turn`) or the budget is
+   hit: send the conversation to `client.messages.create(model="claude-opus-4-8",
+   max_tokens=4096, tools=TOOLS)`, append the assistant turn, dispatch every
+   requested tool call through `HANDLERS`, feed all results back as one user turn.
+   Tool results carry handles, never bytes or markdown (see §5, CONTENT_CACHE).
+7. **Per-file work.** For each worklist item the agent typically calls
+   `read_file` → (`fetch_signal_detail` only if ambiguous) → a translate tool →
+   `save_to_vault`, with `update_mapping` for an unmapped course or `skip_file`
+   for a deliberate skip. The prompt mandates **save immediately** after each
+   translation, before touching the next file.
+8. **End-of-run cost summary.** A `finally` block always runs (even on crash or
+   budget hit): files saved, courses auto-named, deliberate skips, refusals, tool
+   counts, and the cost roll-up (routing vs translation, from the in-memory
+   `LEDGER_ROWS`, so it survives a partial ledger write).
 
 ---
 
-## 4. Data flow — one file end to end
+## 3. Module map
 
-Payloads (bytes / markdown / verbose signals) live in the in-process
-`CONTENT_CACHE` dict and **never cross message history**; only scalars, handles,
-and statuses appear in tool results.
-
-```
-list_folder(folder_id)
-   → drive.list_folder_children → JSON array of {name,id,type,mime_type}   [crosses history: yes, names+ids]
-
-read_file(file_id)                                       [read_file_logic, agent.py:135]
-   1. drive.file_md5(file_id)            metadata only, NO download
-      └─ if manifest entry has matching md_path+source_md5 → {"status":"already_done"}  (skip download)
-   2. drive.download_bytes(file_id)      size-verified; short read → re-download; never → IOError → {"status":"error"}
-   3. manifest.sha256_of(bytes)          → "sha256:<hex>"  (identity + cache key)
-   4. dedup vs manifest by drive_file_id (hash-gated): md_path→already_done; skipped_permanent→already_done; not_translated_yet→proceed
-   4b. cross-ID SHA dedup: any other entry, same hash, has md_path → already_done
-   5. detect_pdf_mode(bytes)             → signals dict
-   6. CACHE WRITES (keyed by source_hash):
-        CONTENT_CACHE[hash]                 = pdf_bytes          [stays in cache]
-        CONTENT_CACHE[hash+":md5"]          = drive_md5
-        CONTENT_CACHE[hash+":signals"]      = 7 lean scalars     (→ manifest later)
-        CONTENT_CACHE[hash+":signals_full"] = {per_page, unrecognized_sample}   [offloaded]
-   → returns {"status":"ready", source_hash, page_count, file_size_kb,
-              signals:{recognizability,tokens_per_page,bytes_per_token,
-                       math_token_fraction,max_garbage_run_DIAGNOSTIC},
-              signals_full_handle}        [crosses history: scalars + handle only]
-
-(optional) fetch_signal_detail(handle)   → reads CONTENT_CACHE[handle]   [per_page+sample cross history only on demand]
-
-translate_text_pdf | translate_image_pdf (source_hash, course, drive_filename, mode_reasoning)
-   [_translate_logic, agent.py:261]
-   - cache miss on source_hash → {"status":"error"}  (read_file must have run)
-   - pdf_bytes = CONTENT_CACHE[source_hash]
-   - today_date stamped by code (datetime.now UTC) → engine prompt   (model can't fabricate the date)
-   - engine_fn(pdf_bytes, course, "", drive_filename, source_hash, today_date)
-        text path: pypdf extract; <50 chars → RuntimeError → {"status":"refused"}
-        text/image path: Claude call (system = shared.md + mode skill), loaded per call at import
-   - REFUSED: check — first line of markdown lstrip().startswith("REFUSED:") → {"status":"refused", reason, cost_data}; NOT cached
-   - else CACHE WRITES:
-        CONTENT_CACHE[hash+":md"]   = markdown      [stays in cache]
-        CONTENT_CACHE[hash+":cost"] = cost_data
-   → returns {"status":"translated", md_cache_handle=hash+":md", chosen_mode, cost_data}   [no markdown in history]
-
-save_to_vault(course, filename(ignored), file_type|custom_subfolder, source_hash, md_cache_handle,
-              drive_file_id, drive_filename, chosen_mode, mode_reasoning)
-   [handle_save_to_vault → engine.save_to_vault]
-   - md   = CONTENT_CACHE[md_cache_handle]      (miss → error)
-   - cost = CONTENT_CACHE[hash+":cost"]         (miss → error)
-   - signals = CONTENT_CACHE[hash+":signals"]   (optional)
-   - md5     = CONTENT_CACHE[hash+":md5"]       (optional)
-   - vault_output_path(...) → <vault>/<course>/<type-folder|custom>/<drive_stem>_EN.md   (ValueError on bad type)
-   - ATOMIC write: <target>.tmp → os.replace(target)   .md ON DISK FIRST
-   - THEN manifest: load_log → upsert_entry (match drive_file_id, in-place) → save_log (atomic)
-   → {"status":"saved","md_path":<vault-relative>}     [crosses history: status + path]
-```
-
-Bytes and markdown exist only in `CONTENT_CACHE` (process memory) and on disk (the
-`.md`); the manifest stores metadata + scalar signals; message history carries
-only names, ids, scalars, handles, statuses, costs, and reasoning strings.
+| Module | Role | Import profile |
+|---|---|---|
+| `agent.py` | The agent loop, the 8 tool schemas, one handler per tool, `CONTENT_CACHE`, prompt-cache breakpoints, budget guard, kickoff/worklist wiring, run logging + cost summary. | Constructs `Anthropic()` at import — **not** import-clean. |
+| `prepass.py` | Deterministic pre-pass: `walk_tree` → `diff_tree` (pure md5 diff) → `build_worklist`. Naming-blind and skip-blind. | Imports `dedup`, `drive`, `manifest`. anthropic-free; needs Google libs installed (lazy auth). |
+| `dedup.py` | Pure manifest dedup **decision** functions: `md5_gate`, `skip_unchanged`, `hash_dedup`. No I/O. The single source of dedup logic, shared by the pre-pass and the loop. | Only `from manifest import find_by_id`. anthropic-free, OAuth-free, import-clean. |
+| `costs.py` | Cache-aware per-call cost + token ledger: `tiered_cost`, `record_call`. The single pricing source for both LLM call sites. | Stdlib only. anthropic-free, import-clean. |
+| `manifest.py` | Single owner of `translated_log.json` I/O: `load_log`, `save_log` (atomic), `find_by_id`, `upsert_entry`, `sha256_of`. | Stdlib only. import-clean. |
+| `drive.py` | All Google Drive logic: `download_bytes` (size-verified), `file_md5`, `list_folder_children`. Service built **lazily** on first call so `import drive` triggers no OAuth. | Google API libs at top; anthropic-free. |
+| `translation_engine.py` | The two translate functions (text via pypdf, image via pdf2image vision) and `save_to_vault` (atomic .md write + manifest upsert). Loads skills as system prompts. | Imports `anthropic`, `pypdf`, `pdf2image`, `costs`, `manifest`. **not** import-clean. |
+| `pdf_mode_detector.py` | Pure extraction-signal reporter (`detect_pdf_mode`). Emits raw signals, **no** text/image verdict — the agent decides. | `io`, `re`; `pypdf` imported lazily inside the function. anthropic-free, import-clean. |
+| `courses.py` | Single owner of `courses.json` I/O: `load_courses`, `update_mapping` (atomic). | Stdlib only. import-clean. |
+| `init_translation_log.py` | One-time **interactive** bootstrap of `translated_log.json`: walks Drive, hashes each PDF, prompts the operator to pair it with a vault `.md`, seed it `not_translated_yet`, or `skipped_permanent`. Not part of a normal run. | Google libs, `yaml`, `dotenv`; anthropic-free. |
+| `skills/` | The four translation system-prompt fragments (see §11). | Markdown, not code. |
 
 ---
 
-## 5. Manifest — `translated_log.json` (live file)
+## 4. The tools
 
-JSON **array** of 104 entries. `manifest.upsert_entry` matches by `drive_file_id`
-and replaces **in place** (order preserved) — confirmed in code and consistent
-with the file. `sha256:` prefix is part of the stored value: **all 104** hashes
-carry it, **0** lack it — dedup compares verbatim. Confirmed.
+`agent.py` defines **8 tools** in `TOOLS`, with a matching `HANDLERS` entry each.
 
-**Observed `model` values (counts):**
-`claude-opus-4-8` ×47 · `manual` ×36 · `claude-opus-4-7` ×15 · `not_translated_yet` ×4 · `skipped_permanent` ×2.
+> **Flag:** `agent.py`'s module docstring (line 1) and the `TOOLS` comment
+> (line 27) both still say "**7** tool schemas" — stale; there are 8. Likewise
+> `agent_routing_prompt.md` line 2 enumerates only 7 tools, omitting
+> `fetch_signal_detail` (which the "Mode Selection" section does reference). The
+> code is the authority: 8 tools, 8 handlers.
 
-**Field coverage:** `md_path` present on 98 (the 6 without = 4 `not_translated_yet`
-+ 2 `skipped_permanent`). `source_md5` on 98. `chosen_mode` + `mode_reasoning` on
-61 (the agent-written entries). The four distinct entry **shapes** present:
+| Tool | Inputs | Output | Manifest | Role |
+|---|---|---|---|---|
+| `list_folder` | `folder_id` | JSON array of children `{name, id, type, mime_type}` | — | The agent's eyes on the tree; used for sibling context, not traversal. |
+| `read_file` | `file_id` | `already_done` \| `ready` (scalar signals + `signals_full_handle`) \| `error` | **reads** (md5 gate + hash dedup) | Download → hash → dedup → detect. Caches bytes/md5/signals/markdown by `source_hash`. |
+| `fetch_signal_detail` | `handle` | `per_page` array + `unrecognized_sample` | — | Offloaded verbose signals; called only for a genuinely ambiguous mode call. |
+| `translate_text_pdf` | `source_hash`, `course`, `drive_filename`, `mode_reasoning` | `translated` (md handle + cost) \| `refused` \| `error` | — | Translate typed/pypdf-readable text via the text engine. |
+| `translate_image_pdf` | `source_hash`, `course`, `drive_filename`, `mode_reasoning` | `translated` (md handle + cost) \| `refused` \| `error` | — | Translate handwritten/scanned/formula-dense PDF via vision. |
+| `save_to_vault` | `course`, `source_hash`, `md_cache_handle`, `drive_file_id`, `drive_filename`, `chosen_mode`, `mode_reasoning`, +`file_type` or `custom_subfolder` | `saved` (vault-relative `md_path`) \| `error` | **writes** translated entry | Atomic `.md` write then manifest upsert. The executor for an already-made routing decision. |
+| `update_mapping` | `hebrew_name`, `english_name` | `mapped` | — (writes `courses.json`) | Persist an agent-assigned course name; logged loudly as an audit line. No approval gate. |
+| `skip_file` | `source_hash`, `drive_file_id`, `drive_filename`, `skip_reason` | `skipped_permanent` | **writes** `skipped_permanent` entry | Record a deliberate skip so the pre-pass drops the file for free next run. |
 
-- **46×** — full agent shape: `drive_file_id, drive_file_name, source_content_hash, md_path, course, type, translated_at, model, cost_usd, input_tokens, output_tokens, chosen_mode, mode_reasoning, recognizability, tokens_per_page, bytes_per_token, math_token_fraction, max_garbage_run_DIAGNOSTIC, page_count, file_size_kb, source_md5`.
-- **37×** — legacy/manual shape (no signals, no mode): `...drive_file_id, drive_file_name, source_content_hash, md_path, course, type, translated_at, model, cost_usd, input_tokens, output_tokens, source_md5`.
-- **14×** — older agent shape: like the full shape but **missing** `tokens_per_page/bytes_per_token/page_count/file_size_kb` and **carrying `total_tokens`** (a field current code never writes — legacy from `init_translation_log`/an earlier signal set).
-- **4×** — manual, no `source_md5`.
-- **2×** — `skipped_permanent` shape: adds `skip_reason`, no signals.
-- **1×** — **leaked verbose shape**: a full-shape entry that *also* contains `per_page` **and** `unrecognized_sample`. The current `save_to_vault` path writes only the 7 lean scalars to the manifest, so this entry predates the context-offload split or was hand-seeded — evidence the verbose signals once reached the manifest.
-
-**Sample entries (fields only, content elided):**
-```
-{drive_file_id:"1tWkR983...", drive_file_name:"Lecture20_…pdf", type:"lecture",
- model:"claude-opus-4-8", chosen_mode:"text",
- mode_reasoning:"typed text: recog 0.78, healthy tokens, fragmented inline LP/vertex-cover math",
- recognizability:0.7789, tokens_per_page:205.43, bytes_per_token:390.23,
- math_token_fraction:0.0174, max_garbage_run_DIAGNOSTIC:20, page_count:7,
- file_size_kb:548, source_md5:"aca73629…", cost_usd:0.270745}
-
-{drive_file_id:"1G4O8I5B...", drive_file_name:"עבודת בית 1 …pdf", type:"homework",
- model:"manual", cost_usd:0, input_tokens:0, output_tokens:0, source_md5:"a78fd000…"}
-```
-
-**`not_translated_yet` (4):** `md_path:null`, `course:null`, `type:null`, hash present
-(e.g. `עבודה 1/2/3.pdf`, `תרגיל בית 1.pdf`). `read_file`'s dedup falls through these
-to "proceed" — they are seeds, not done-markers.
-
-**`skipped_permanent` (2):** `Algo262_Ass2_AnswerSheet 2.pdf` and
-`Algo262_Ass1_AnswerSheet_…pdf`, both `skip_reason:"not_relevant"`. `read_file`
-returns `already_done` for these on hash match.
-
-**The "404 orphan."** STATUS/PHASE2_NOTES claim **one** dangling entry whose Drive
-source 404'd, found during the md5 backfill and left in place. **It carries no
-structural marker** — there is no `404`/`orphan`/`missing` field anywhere in the
-manifest (grep-confirmed). So it is **indistinguishable from a normal translated
-entry by inspecting the JSON alone**; confirming *which* entry it is would require
-a live Drive metadata call (out of scope for this read-only pass). The claim is
-plausible (98 entries have `md_path`+`source_md5`; STATUS itself says backfill
-covered **97/98**, i.e. one entry the gate couldn't fast-path) but **not verifiable
-from the file**.
+Bytes and translated markdown **never** appear in a tool result — only handles do
+(see §5).
 
 ---
 
-## 6. Prompts & skills
+## 5. State
 
-**`agent_routing_prompt.md`** (the loop system prompt) — sections actually present:
-*Source and Workflow* · *Agent Routing & Traversal* (Roles: LECTURES/TUTORIALS/
-HOMEWORK/EXAMS/SKIP/CLEAN) · *Rules* (skip-wins, inherit-when-unclear, non-standard
-types/`custom_subfolder`, course naming via kickoff + `update_mapping`, autonomous
-routing, skip-floor, hash-dedup, save-immediately, log-every-decision, termination)
-· *Mode Selection* (signal-availability note, strong IMAGE/TEXT signals,
-formula-sheet carve-out, reading `unrecognized_sample`, image-on-ambiguity,
-refusal handling) · *Reporting Back* · *Do Not*. The prompt lists the **6** tools
-explicitly (omits `fetch_signal_detail`, which it then describes in the mode
-section).
+**`translated_log.json` (the manifest).** A JSON list of entries, one per Drive
+file, keyed by `drive_file_id` (`manifest.upsert_entry` replaces in place). A
+translated entry written by `save_to_vault` carries:
 
-**Skills.** Loaded by `translation_engine.py` at **import time**, then composed:
-`_TEXT_SYSTEM_PROMPT = translate-shared.md + translate-text-pdf.md`,
-`_IMAGE_SYSTEM_PROMPT = translate-shared.md + translate-image-pdf.md`. The skill
-text is therefore baked into module-level constants — **each `translate_*` call
-re-sends the same composed system prompt, but the files are read once per process,
-not per call.** So "each translate tool loads its skill per-call" is **true for the
-API call, false for the file read** (cached at import). `save-to-vault.md` documents
-the executor contract but is **not loaded by any code** — it's a spec doc only.
-`_ROUTING_PROMPT` is also read at import in `translation_engine.py` and never used.
+| Field | Meaning |
+|---|---|
+| `drive_file_id`, `drive_file_name` | Drive identity. |
+| `source_content_hash` | `"sha256:…"` of the bytes — the dedup + cache identity. |
+| `source_md5` | Drive's `md5Checksum` — powers the pre-pass freshness gate. Written only when present (absent for native Google Docs). |
+| `md_path` | Vault-relative path to the `.md`. `null` for skip/seed entries. |
+| `course`, `type` | Routing decision. |
+| `chosen_mode`, `mode_reasoning` | `"text"`/`"image"` and the one-line signal rationale. |
+| `model`, `cost_usd`, `input_tokens`, `output_tokens` | Spend. |
+| `translated_at` | UTC timestamp. |
+| extraction signals | The lean scalar subset from the detector (`recognizability`, `total_tokens`, `max_garbage_run_DIAGNOSTIC`, …), merged in when present. |
 
-**Autonomy-reversal residue.** `flag_for_approval` / `ask_user` / `already_pending`
-appear in **no** prompt, schema, or skill text (grep-clean). The only matches for
-"approval" are **affirmative** statements that there is *no* approval gate
-(`agent_routing_prompt.md` lines 2 & 19, `agent.py:109` & 387, `courses.py:7`).
-The reversal looks complete in the live prompt/schema surface. (HISTORY notes
-`already_pending` was also stripped from `read_file`'s schema description — confirmed
-absent there.)
+The `model` field doubles as a status sentinel: real model ids
+(`claude-opus-4-8`, and older `claude-opus-4-7` entries) and `manual` mean
+translated; `not_translated_yet` is a bootstrap seed; `skipped_permanent` is a
+deliberate skip (carries `skip_reason`, `md_path: null`). The manifest currently
+holds 124 entries across those five `model` values.
 
----
+**`courses.json`.** Flat `{hebrew_folder_name: english_course_name}`. The agent's
+spelling/consistency reference for course-folder naming only — it does **not**
+gate or route. It is injected into the kickoff so the agent reads it from run
+context, and the agent writes back to it via `update_mapping` when it auto-names
+an unmapped course. (`drive.py`'s `ROOT_FOLDER_ID`, not `courses.json`, defines
+the scanned tree.)
 
-## 7. Detector (`pdf_mode_detector.py`)
-
-`detect_pdf_mode(pdf_bytes)` returns signals only — **no `mode`/verdict key**
-(confirmed: no `"mode"` in any return dict; the only `mode` strings are set by the
-*engine*, not the detector). Fields returned on the success path:
-`recognizability, tokens_per_page, bytes_per_token, math_token_fraction,
-unrecognized_sample, per_page (list of {page,tokens,recognizability,math_fraction}),
-max_garbage_run_DIAGNOSTIC, page_count, file_size_kb`. The extraction-failure path
-returns the same keys with zeroed/degenerate values (`per_page:[]`,
-`bytes_per_token = file_size_kb*1024`) so the agent routes to image.
-
-`max_garbage_run` is exposed **only** under the name
-`max_garbage_run_DIAGNOSTIC`, and every return site + the prompt label it as a
-diagnostic, "NOT a handwriting detector … do not route on this alone." Confirmed.
-`_analyze_text` internally also returns `total_tokens`, but `detect_pdf_mode`
-does **not** propagate it into its public dict (it's consumed locally to compute
-`tokens_per_page`/`bytes_per_token`) — consistent with `total_tokens` being a
-legacy manifest field (§5) not produced by the current path.
+**`CONTENT_CACHE`** (`agent.py`). An in-memory dict living in the run's scope,
+**keyed by `source_hash`** (content, not `file_id`, so a re-edited file misses the
+stale entry). It holds the raw PDF bytes plus derived values under suffixed keys:
+`:md5`, `:signals` (lean, manifest-bound), `:signals_full` (verbose, behind the
+fetch handle), `:md` (translated markdown), `:cost`. The translate and save
+handlers read these back by hash; this is how bytes/markdown/cost cross handlers
+**without** ever entering the model's context. It is **not** persisted — a crash
+loses it (see §12).
 
 ---
 
-## 8. Doc-vs-code drift table
+## 6. Dedup chain
 
-| # | Doc claim (STATUS/HISTORY/PHASE2_NOTES) | Code reality | Severity |
-|---|---|---|---|
-| 1 | STATUS: "All seven tools work: the 6 core handlers … plus `fetch_signal_detail`." | True — all 7 handlers are real and dispatched. But `agent.py`'s own header comment (lines 1–2) names nonexistent files `stage1_bare_turn.py`/`stage2_loop.py`, and the handler comment (121–122) says "the rest are still stubbed." | Stale comments only |
-| 2 | STATUS: "Semester ד is fully translated — ~97 files done." / "Backfilled 97/98 with `source_md5`." | Manifest has 104 entries; 98 have `md_path` (translated), 98 have `source_md5`, 61 are agent-written. The "~97" is roughly the translated count; numbers are approximate, not exact. | Minor (counts drift) |
-| 3 | STATUS / PHASE2_NOTES: "one 404 orphan … left in place." | No structural marker exists in the manifest; the orphan is indistinguishable from a normal entry without a live Drive call. Claim unverifiable from the repo. | Unverifiable from code |
-| 4 | STATUS queued Q: "keep or drop `fetch_signal_detail` (0 calls in practice)." | Still fully wired (schema + handler + cache). No change made. | Informational |
-| 5 | save-to-vault.md: "Record `model="opus-4-8"`." | Code records `cost_data["model"]`, which is the literal `"claude-opus-4-8"` (from `engine.MODEL`), not `"opus-4-8"`. Manifest confirms `claude-opus-4-8`. | Doc string wrong |
-| 6 | `save_to_vault` schema requires `filename`. | `handle_save_to_vault` ignores `filename`; the stem comes from `drive_filename`. Required-but-unused field. | Schema/handler mismatch |
-| 7 | HISTORY "Manifest schema additions": current agent entries carry the 7 lean scalars. | One live entry **also** carries `per_page`+`unrecognized_sample`, and 14 carry the legacy `total_tokens` — the on-disk manifest holds **multiple historical shapes**, not one. | Schema heterogeneity |
-| 8 | `translation_engine` loads `_ROUTING_PROMPT` "ready for when that loop is built." | The loop *is* built (`agent.py` loads the routing prompt itself). The engine's `_ROUTING_PROMPT` read is now **dead**. | Dead code |
-| 9 | manifest.py docstring: "Consolidated from the duplicated load_log/save_log helpers that previously lived in translate_one.py, translate_image_pdf.py." | `translate_one.py`/`translate_image_pdf.py` still **import** `load_log/save_log` from `manifest`, but write the manifest **directly** (remove-then-append) and save `.md` to the course root with **no type subfolder** — a parallel, divergent path the consolidation note implies is gone. | Partial consolidation |
-| 10 | HISTORY: model migration "Opus 4.7 → 4.8." | Manifest still has **15** `claude-opus-4-7` entries (pre-migration, not re-run); `hello_world.py` still calls `claude-sonnet-4-6`. Migration applied to new work only. | Expected residue |
+A single source of truth — `dedup.py` — drives both the pre-pass and the loop:
 
----
+1. **md5 gate (pre-download).** `dedup.md5_gate`: if the file already has a
+   translated entry (`md_path` present) whose stored `source_md5` equals Drive's
+   current md5, the bytes are provably unchanged → `already_done`, no download.
+   `dedup.skip_unchanged` is the companion for `skipped_permanent` entries
+   (md_path is null, so `md5_gate` can't cover them). Both are md5-only and N/A
+   when Drive's md5 is `None` (native Google Docs).
+2. **Cross-ID content SHA (post-download).** Inside the loop, `read_file_logic`
+   downloads the bytes (size-verified by `drive.download_bytes`), hashes them, and
+   calls `dedup.hash_dedup`:
+   - *branch b* — by `drive_file_id`, gated on the stored `source_content_hash`
+     matching: `md_path` present → `already_done`; `skipped_permanent` →
+     `already_done` with the skip reason; `not_translated_yet`/other → fall
+     through.
+   - *branch c* — cross-ID fallback: the same content already translated under any
+     other id → `already_done`. Safe only because the bytes were integrity-checked
+     before hashing.
+   - no hit → `PROCEED` (run the detector and translate).
 
-## Dependency graph
-
-```mermaid
-graph TD
-    subgraph agent_loop[Agent loop]
-        AGENT[agent.py]
-    end
-    subgraph concern_modules[Concern modules]
-        DRIVE[drive.py]
-        MANIFEST[manifest.py]
-        COURSES[courses.py]
-        DETECTOR[pdf_mode_detector.py]
-        ENGINE[translation_engine.py]
-    end
-    subgraph manual[Manual / bootstrap — not imported by the loop]
-        T1[translate_one.py]
-        T2[translate_image_pdf.py]
-        LIST[list_drive.py]
-        HELLO[hello_world.py]
-        INIT[init_translation_log.py]
-    end
-
-    AGENT --> DRIVE
-    AGENT --> MANIFEST
-    AGENT --> COURSES
-    AGENT --> DETECTOR
-    AGENT --> ENGINE
-    ENGINE --> MANIFEST
-    DETECTOR -. lazy import .-> PYPDF[(pypdf)]
-
-    T1 --> MANIFEST
-    T1 --> ENGINE
-    T2 --> MANIFEST
-    T2 --> ENGINE
-    INIT -.->|self-contained, no sibling imports| INIT
-```
-
-Text form (internal edges only):
-- `agent.py` → `drive`, `manifest`, `courses`, `pdf_mode_detector`, `translation_engine`
-- `translation_engine.py` → `manifest`
-- `translate_one.py` → `manifest`, `translation_engine`
-- `translate_image_pdf.py` → `manifest`, `translation_engine`
-- `pdf_mode_detector.py`, `manifest.py`, `drive.py`, `courses.py`, `list_drive.py`, `hello_world.py`, `init_translation_log.py` → no sibling imports
-- Importing `drive.py` or `agent.py` triggers Google OAuth at module load (`drive.service` is built at import).
+The pre-pass uses only the md5 layer (downloading would defeat the point);
+`hash_dedup` is the post-download authority inside the loop.
 
 ---
 
-## Flat inventory (file → LOC → last-touched)
+## 7. Mode dispatch (text vs image)
 
-| File | LOC | Last touched (committer date) |
-|---|---:|---|
-| agent.py | 658 | 2026-06-05 |
-| init_translation_log.py | 549 | 2026-06-01 |
-| translation_engine.py | 400 | 2026-06-05 |
-| pdf_mode_detector.py | 363 | 2026-06-01 |
-| translate_image_pdf.py | 136 | 2026-06-01 |
-| translate_one.py | 130 | 2026-06-01 |
-| drive.py | 111 | 2026-06-05 |
-| manifest.py | 75 | 2026-06-04 |
-| courses.py | 45 | 2026-06-04 |
-| list_drive.py | 41 | 2026-05-05 |
-| hello_world.py | 16 | 2026-04-20 |
-| agent_routing_prompt.md | 58 | 2026-06-04 |
-| skills/translate-shared.md | 116 | 2026-06-04 |
-| skills/save-to-vault.md | 14 | 2026-06-01 |
-| skills/translate-image-pdf.md | 11 | 2026-06-01 |
-| skills/translate-text-pdf.md | 11 | 2026-06-01 |
-| courses.json | 7 | 2026-06-04 |
-| translated_log.json | 1973 | (data file; 104 entries) |
-| requirements.txt | 9 | 2026-05-05 |
+`pdf_mode_detector.detect_pdf_mode` is a **pure, verdict-free** measurement
+function. It reports scalar signals (`recognizability`, `tokens_per_page`,
+`bytes_per_token`, `math_token_fraction`, `max_garbage_run_DIAGNOSTIC`,
+`page_count`, `file_size_kb`) plus verbose `per_page` / `unrecognized_sample`
+behind a handle. The old verdict thresholds remain in the module as constants but
+are **deliberately not applied** anywhere — they are reference only.
 
-*Notes:* `translated_log.json` is a generated data file (not hand-maintained source).
-Untracked working-tree items: `Documentation/` (HISTORY/STATUS/plan/checklists/
-PHASE2_NOTES) and runtime artifacts not in git (`logs/`, `token.json`,
-`credentials.json`, `.env`). No untracked `.py` files exist.
+The **agent** owns the decision, per the "Mode Selection" rubric in
+`agent_routing_prompt.md`: low `tokens_per_page` / high `bytes_per_token` /
+high per-page variance → image; high `recognizability` + healthy yield + math
+that's just fragmented LaTeX in prose → text; a formula-dense page (high
+`math_token_fraction`, math dominating prose) → image even when typed.
+`max_garbage_run_DIAGNOSTIC` is explicitly *not* a verdict driver. **On genuine
+ambiguity, default to image** — image mode on typed content merely costs more,
+whereas text mode on handwritten content silently fabricates (the Lecture 4
+failure). A file is never skipped over mode ambiguity.
+
+---
+
+## 8. Skip model
+
+There are two distinct "skip" concepts and they must not be conflated:
+
+**Deliberate skip (`skip_file` → `skipped_permanent`).** The agent has *read* a
+file and decided not to translate it. This is the **only** skip-by-pattern rule,
+and it is **narrow**: a solution file whose name carries the **פתר** stem
+(פתרון / פתור, spelling varies) nested under a homework folder carrying the
+**עבוד** stem (עבודה / עבודות / עבודות בית) — i.e. a handwritten homework
+answer sheet. **Both stems together are required.** The handler writes a
+`skipped_permanent` manifest entry keyed by `drive_file_id` (with `source_md5`
+from the read_file cache), so the next run's pre-pass drops the file via
+`dedup.skip_unchanged` while its bytes are unchanged. The old broad keyword rule
+(פתרון / תשובות / מענה matched anywhere) is **gone**: a פתר-stem file *outside*
+the homework context is translated by default.
+
+**Skip-floor (cannot-determine).** A file with genuinely no basis for
+classification (gibberish/unreadable name, no resolving context). This is
+**run-log only** — the agent logs it as unprocessed in its reasoning and the run
+log, and writes **no manifest entry**. Because nothing is recorded, such a file
+reappears on the next run's worklist. `skip_file` must **not** be called for
+these. The pre-pass itself performs **no** skip logic of either kind — it is
+skip-blind; a deliberately-skipped file stays cheap only because its bytes are
+unchanged (md5), not because the pre-pass understands it.
+
+---
+
+## 9. Cost model
+
+`costs.py` is the single cache-aware pricing source for both LLM call sites
+(routing in `agent.py`, translation via the engine's `on_usage` callback). The
+four token classes are **disjoint** in Anthropic's usage object and are each
+multiplied by their own rate and summed (never subtracted), per 1e6 tokens:
+
+| Class | Rate (USD / 1e6) |
+|---|---|
+| input (fresh) | `$5.00` |
+| output | `$25.00` |
+| cache write (5-min ephemeral) | `$6.25` (1.25× input) |
+| cache read / hit | `$0.50` (0.1× input) |
+
+`record_call` appends one OTel-aligned JSON row per call to
+`logs/ledger_<run_id>.jsonl` and returns it for the in-memory roll-up; a ledger
+write failure warns and still returns the row (never raises into the run). The
+end-of-run summary splits **routing** vs **translation** cost — routing being the
+half the per-file manifest never sees.
+
+**Prompt caching** (routing loop only). Render order is tools → system →
+messages. Two ephemeral breakpoints: one on the system block (caches tools +
+system prompt together), one moved forward each turn onto the last message block
+(caches the conversation prefix). `_set_cache_breakpoint` clears any prior
+message-level breakpoint before setting the new one, keeping within the
+4-breakpoint cap. Cache verification: `cache_read` should climb turn-over-turn.
+
+> **Note:** `costs.py` documents the 5-minute ephemeral write rate only; a
+> `ttl:"1h"` write (billed 2× input) is explicitly *not* handled. The code issues
+> only 5m writes, so this is correct today — but it is a latent gap if 1h caching
+> is ever adopted. There is **no 1h cache path anywhere in the live code** (the
+> default 5-min TTL is the only one used).
+
+---
+
+## 10. Guardrails
+
+- **Refuse rather than reconstruct.** The skills forbid fabricating unreadable
+  content. A genuine refusal is signalled by `REFUSED: <reason>` as the **very
+  first line** of the translation output. `_translate_logic` checks the first line
+  only (so a body merely *discussing* OCR garbage can't trip it) and returns
+  `status: "refused"` without caching markdown.
+- **Extraction-yield backstop.** The text engine raises `RuntimeError` when pypdf
+  yields <50 chars; the handler turns it into `refused` so the agent reconsiders
+  image mode.
+- **Save immediately.** The prompt requires `save_to_vault` right after each
+  successful translation, before any other file — a mid-run failure can't strand
+  unsaved work.
+- **Atomic save, single writer.** `save_to_vault` writes the `.md` (temp file +
+  `os.replace`) **before** touching the manifest, so a failed disk write never
+  leaves a manifest record for an absent file. All manifest I/O goes through
+  `manifest.py` (the sole writer); `save_log` is itself atomic.
+- **Download integrity.** `drive.download_bytes` verifies length against Drive's
+  reported `size` and re-downloads on a short read, so truncated bytes are never
+  hashed or translated.
+- **Tool-call budget.** The loop is capped at **200 real tool calls**
+  (`TOOL_CALL_BUDGET`), checked before each dispatch (not per turn, since one turn
+  can batch many calls).
+- **Crash-safe summary.** The loop is wrapped in try/except/finally so a transient
+  failure still emits the audit summary and closes the log.
+
+---
+
+## 11. Skills
+
+`translation_engine.py` builds each translate tool's system prompt by
+concatenating `skills/translate-shared.md` (the shared craft: output format, YAML
+frontmatter, figure rules, glossary, the refuse-rather-than-reconstruct contract)
+with the mode-specific fragment — `skills/translate-text-pdf.md` (reassemble
+fragmented typed math into LaTeX; don't refuse over fragmentation) or
+`skills/translate-image-pdf.md` (vision input; the figures *are* visible). Skills
+are loaded once at module import. `skills/save-to-vault.md` documents the executor
+contract (no re-deciding routing; atomic write; in-place upsert). The agent loop's
+own system prompt is the separate `agent_routing_prompt.md`.
+
+---
+
+## 12. Known limits / deferred
+
+- **Cache is in-memory only.** `CONTENT_CACHE` is not persisted; a crash between
+  translate and save loses the translated markdown. The "save immediately" rule
+  narrows but does not close this window — a disk-persisted cache (a hard save
+  guarantee) is deferred.
+- **No `--audit` mode.** A standalone manifest-audit mode (re-verify hashes,
+  detect stale/orphaned entries) is not implemented. The audit *logic* was run
+  once manually as the md5 backfill.
+- **No hybrid PDF mode.** A file is translated wholly in text **or** image mode; a
+  per-page hybrid path does not exist (the skills describe "hybrid" as a
+  translator judgment within one mode, not a separate engine).
+- **The 404 orphan.** STATUS/PHASE2_NOTES/HISTORY record **one** manifest entry
+  whose Drive source has 404'd, found during the md5 backfill and left in place as
+  harmless. It carries **no** structural marker (no `404`/`orphan`/`missing`
+  field), so it is indistinguishable from a normal translated entry without a live
+  Drive call. **This claim is unverifiable from the repo alone** — the code and
+  manifest contain nothing that identifies it.
+
+> **Flag — disagreement with the task brief / older docs.** The brief lists "2
+> bootstrap `skipped_permanent` entries missing `source_md5`." That is **no longer
+> true**: the live manifest has **0** entries missing `source_md5` (all 11
+> `skipped_permanent` entries carry it), backfilled by commit `5e87909`
+> ("manifest updates from pre-pass runs + Ass1 md5 backfill"). Every
+> `skipped_permanent` entry is therefore pre-pass-skippable today. The file/entry
+> counts in `STATUS.md` (98 files / 104 entries) also predate the recent pre-pass
+> runs — the manifest now holds 124 entries.
