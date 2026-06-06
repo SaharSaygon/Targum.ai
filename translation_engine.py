@@ -19,7 +19,6 @@ import pypdf
 from pdf2image import convert_from_bytes
 
 import manifest
-from manifest import sha256_of  # re-exported: thin wrappers import it from here
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,16 +58,6 @@ _IMAGE_SKILL = _load_skill("translate-image-pdf.md")       # image-mode craft
 _TEXT_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _TEXT_SKILL
 _IMAGE_SYSTEM_PROMPT = _TRANSLATION_PROMPT + "\n\n" + _IMAGE_SKILL
 
-# Used by the thin wrappers (translate_one.py, translate_image_pdf.py)
-# to classify files by name into lecture / tutorial / homework / exam.
-# Each tuple is: ([Hebrew and English keywords to look for], type_string)
-_TYPE_KEYWORDS = [
-    (["הרצאה", "lecture", "lec"], "lecture"),
-    (["תרגול", "tutorial", "tirgul"], "tutorial"),
-    (["עבודה", "תרגיל", "homework", "hw"], "homework"),
-    (["בוחן", "exam", "moed"], "exam"),
-]
-
 # Maps the semantic type value to the subfolder name inside the course folder:
 # "lecture" → <vault>/<course>/Lectures/<file>_EN.md, etc. "reference" maps to
 # "" and lands directly in the course root.
@@ -84,16 +73,6 @@ TYPE_TO_FOLDER = {
 }
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
-
-def infer_type(filename: str) -> str | None:
-    # lower() so we match "Lecture", "LECTURE", "הרצאה" case-insensitively.
-    # any() short-circuits: stops checking keywords as soon as one matches.
-    lower = filename.lower()
-    for keywords, type_val in _TYPE_KEYWORDS:
-        if any(k in lower for k in keywords):
-            return type_val
-    return None  # caller decides what to do when type can't be inferred
-
 
 def vault_output_path(
     vault_path: Path,
