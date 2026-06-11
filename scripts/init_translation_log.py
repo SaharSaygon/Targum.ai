@@ -6,9 +6,9 @@ prompts you to pair it with an existing Obsidian .md file or mark it as
 not-yet-translated / permanently skipped. Safe to re-run: already-logged
 Drive file IDs are skipped automatically.
 
-Usage:
-    python init_translation_log.py
-    python init_translation_log.py --course "Design of Algorithms"
+Usage (from the project root):
+    python scripts/init_translation_log.py
+    python scripts/init_translation_log.py --course "Design of Algorithms"
 
 Requires:
     .env             OBSIDIAN_VAULT_PATH, DRIVE_SOURCE_FOLDER_ID
@@ -40,9 +40,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
+# This script lives in scripts/; the modules and data files live in the
+# project root one level up.
+PROJECT_ROOT = Path(__file__).parent.parent
+
+import sys
+sys.path.insert(0, str(PROJECT_ROOT))
 from manifest import load_log, save_log
 
-PROJECT_ROOT = Path(__file__).parent
 LOG_PATH = PROJECT_ROOT / "translated_log.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
