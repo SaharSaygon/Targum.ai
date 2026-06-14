@@ -30,7 +30,7 @@ RUN SUMMARY (files translated, skips, refusals, total cost).
 | `scripts/` | One-off utilities (`init_translation_log.py` — interactive manifest bootstrap) |
 | `translated_log.json` | The manifest: every known Drive file with hash, vault path, or skip reason |
 | `logs/` | Run logs + cost ledgers (current; older runs in `logs/archive/`) — gitignored |
-| `Documentation/` | Architecture, status, history, flowcharts, project plan |
+| `Documentation/` | Architecture, status, history, flowcharts, optimization notes |
 
 Secrets (`credentials.json`, `token.json`, `.env`) are gitignored and stay in
 the project root. If a run fails with `invalid_grant: Token has been expired

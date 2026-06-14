@@ -1,6 +1,6 @@
 # PHASE 2 NOTES — optimization backlog
 
-Relocated to repo root (alongside STATUS.md / HISTORY.md / the project plan) and
+Relocated to repo root (alongside STATUS.md / HISTORY.md) and
 reconciled **2026-06-04** against what the Phase 1 build-out actually delivered.
 Status legend: **Done-verified** / **Done** / **Partial** / **Open** / **Deferred** /
 **Known limit — not fixing**.
