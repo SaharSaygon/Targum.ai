@@ -1,4 +1,4 @@
-# AI Markdown Agent
+# Targum.ai
 
 Agentic Hebrew→English translator for university course material. It scans a
 Google Drive course tree, decides per file what to do (translate as

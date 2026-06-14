@@ -11,13 +11,13 @@ Current state lives in STATUS.md — don't update status flags here.
 - Claude Code v2.1.114 — required PATH override in VS Code settings.json
 - Default VS Code terminal set to Command Prompt
 
-### Mac transition (current machine — MacBook Air M5)
+### Mac transition (current machine)
 - Homebrew, Python 3, Node, Git, VS Code, Claude Code, gh installed
 - Repo cloned from GitHub
 - `.venv` recreated, `pip install -r requirements.txt` clean
 - New Mac-specific Anthropic API key created; old Windows key revoked
 - `credentials.json` re-downloaded from Google Cloud Console
-- Obsidian vault path: `/Users/saharsaygon/Documents/Obsidian Vault/`
+- Obsidian vault path: `~/Documents/Obsidian Vault/` (local, gitignored)
 
 ### Python version issue (caught during Day 2 calibration)
 - ⚠️ `.venv` was built with system Python 3.9.6, not 3.12 as the plan specifies
@@ -30,7 +30,7 @@ Current state lives in STATUS.md — don't update status flags here.
 
 ## Project repo (GitHub)
 
-- Private repo: `Agent_Translator_English_MD`
+- Private repo: `Targum.ai`
 - `.gitignore` excludes: .env, credentials.json, token.json, __pycache__/, .venv/, *.log, .DS_Store
 - `requirements.txt` committed: anthropic, python-dotenv, google-api-python-client, google-auth-httplib2, google-auth-oauthlib, pypdf, pdf2image, Pillow
 
@@ -946,3 +946,74 @@ once" caveat is **closed** — every skip now drops for free in the pre-pass.
 Routing was **$0.66** on a 19-file delta — versus the prior **~$2** full-tree re-walk that
 re-derived routing over the whole near-static tree. That gap is the pre-pass win, now measured on a
 committed run rather than projected.
+
+---
+
+## Project rename: → Targum.ai / Targum_ai (2026-06-14)
+
+Renamed the project off its working titles (`AI Markdown Agent`, repo
+`Agent_Translator_English_MD`). Two distinct targets, deliberately NOT conflated:
+
+- **Human-facing brand + GitHub repo** → `Targum.ai` (with the dot). GitHub repo
+  names allow dots, so the repo itself is named `Targum.ai`.
+- **Local filesystem / clone directory** → `Targum_ai` (dotless — the dot is an
+  illegal Python identifier, and the working dir is already `Targum_ai`).
+
+Scope was docs/prose only — **zero `.py` files touched**, so no module/import/argparse
+changes. Edits: `README.md` H1 → `# Targum.ai`; repo-name references in
+`hebrew_translator_project_plan.md`, `HISTORY.md`, `day_1_checklist.md` → `Targum.ai`;
+the one historical clone-path line → `~/Projects/Targum_ai` (dotless).
+The same six doc edits were mirrored into the Obsidian vault copies under
+`Documents/Obsidian Vault/Targum_ai/Documentation/`.
+
+**Deliberately left unchanged (findings, not rename targets):** the
+`hebrew_translator_project_plan.md` filename pointers in the Day-1/Day-2 checklists
+(real files, not renamed), and the external GCP project id `hebrew-translator`
+(a real cloud resource — renaming the text would make the doc wrong). The manifests
+(`translated_log.json`, `courses.json`) were verified clean — they carry no project
+name, as intended.
+
+Manual steps left for the user (NOT done here): rename the GitHub repo in Settings →
+`Targum.ai`, `git remote set-url origin <new-url>`, rename the local clone dir to
+`Targum_ai`, and rebuild the venv only if the absolute clone path changes.
+
+## Exam-solution skip rule added — own vs official (2026-06-14)
+
+Extended the solution-routing policy with a second deliberate skip case, parallel to
+the homework-solution rule. **We do NOT translate the user's OWN exam solutions —
+only official typed ones.** New `EXAM SOLUTIONS (ownership-decided)` bullet in
+`agent_routing_prompt.md`: a פתר-solution file under a מבחן/בוחן (or מועד א/ב/ג)
+exam ancestor is skipped via `skip_file` when EITHER (1) an explicit ownership marker
+is in the path — `פתרונות שלי` / a bare `שלי` / Latin "my" (this catches a typed exam
+FORM filled in by hand, which the signals alone would misread as typed) — OR (2) the
+typed-vs-handwritten signals read handwritten (low tokens/page, huge bytes/token, low
+recognizability). An official typed solution with NO ownership marker (e.g. "Moed A -
+Solution", or a `פתרונות רשמיים` folder) is translated (type: exam). When ownership is
+genuinely ambiguous, prefer skip.
+
+The `Rules:` summary now names **two** skip cases, both the user's own work:
+(a) handwritten עבוד-homework + פתר-solution files, and (b) the user's own exam
+solutions. Everything else — including official typed solutions, homework OR exam —
+translates by default. This is an ownership refinement on top of the earlier
+typed-vs-handwritten homework narrowing (`af73e8d`); the old broad keyword skip stays
+gone.
+
+## Rename-verification live run (`agent_20260614_202844`) (2026-06-14)
+
+Ran the agent end-to-end after the rename to confirm nothing broke (the rename
+touched no code, but verified on real data anyway). Drive OAuth and the Anthropic key
+both authenticated with no re-auth prompt.
+
+- Pre-pass: **scanned 213 files → 1 worklist** (212 unchanged excluded).
+- Outcome: **0 translated, 1 deliberate skip** via `skip_file` —
+  `פונקציות מרוכבות/עבודות/פתור/עבודה 6.pdf`, a handwritten homework solution
+  (tokens/page 0, recognizability 0, ~2.7MB / 5pp scan → the user's own handwriting,
+  not a typed official solution).
+- Tool calls: **2 / 200** (read_file 1, skip_file 1, 0 auto-named).
+- Cost: **$0.092** (routing only; $0 translation), 3 LLM calls, **37.4s** wall-clock,
+  **0 refusals, 0 errors.**
+- Logs: `logs/agent_20260614_202844.log`, `logs/ledger_20260614_202844.jsonl`.
+
+Confirms the doc/brand rename left the agent loop, imports, auth, and routing fully
+intact. The run mutated `translated_log.json` (recorded that one file
+`skipped_permanent`) — normal, name-agnostic agent behavior.

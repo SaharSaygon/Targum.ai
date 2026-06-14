@@ -1,5 +1,11 @@
 # STATUS
 
+> **Project name (2026-06-14):** brand + GitHub repo = **`Targum.ai`** (with the dot);
+> local clone directory / filesystem = **`Targum_ai`** (dotless — illegal as a Python
+> identifier with the dot). No code/module names changed by the rename. See HISTORY
+> "Project rename: → Targum.ai / Targum_ai (2026-06-14)". Manual follow-ups (rename the
+> GitHub repo, `git remote set-url`, rename the local dir) are the user's to do.
+
 ## Current state
 **Phase 1 COMPLETE.** The full agent loop is built and running end-to-end on real
 Drive folders: autonomous on naming + routing (no approval gate), budget-guarded
@@ -75,13 +81,28 @@ See HISTORY "Deterministic routing pre-pass built + skip-rule narrowed (2026-06-
 
 **Coupled change — skip rule narrowed (REVERSAL).** The broad SKIP-keyword rule
 (פתור/פתרון/תשובות/מענה → skip any matching segment) is **gone**. There is **no skip rule in the
-pre-pass** and no broad keyword rule. Skip is the agent's decision on **new files only**: a
-solution segment (stem פתר) nested under a homework folder (stem עבוד) — an unreadable
-handwritten homework solution — is recorded `skipped_permanent` via the new `skip_file` tool, and
-the pre-pass drops it on every later run. That stem-pair is the ONLY skip-by-pattern case;
-solution-like names outside the homework context now translate normally. (The earlier "2
-bootstrap `skipped_permanent` entries lack `source_md5` → re-enter once" caveat is **RESOLVED** —
-both were backfilled, commit `5e87909`; all 11 such entries are md5-backed and drop for free.)
+pre-pass** and no broad keyword rule. Skip is the agent's decision on **new files only**, and there
+are now **two deliberate skip cases — both the user's OWN solutions:**
+- **Homework solutions (signal-decided):** a solution segment (stem פתר) under a homework folder
+  (stem עבוד) that reads **handwritten** (low tokens/page, huge bytes/token, low recognizability)
+  → `skipped_permanent` via `skip_file`. Typed/official homework solutions translate.
+- **Exam solutions (ownership-decided, added 2026-06-14):** a פתר-solution under a מבחן/בוחן (or
+  מועד א/ב/ג) exam ancestor that is **the user's own** → skip. Ownership is decided two ways,
+  either one triggers the skip: an explicit "my solutions" marker in the path (`פתרונות שלי` /
+  bare `שלי` / Latin "my" — catches a typed exam form filled in by hand), OR handwritten signals.
+  **We do NOT translate the user's own exam solutions — only official typed ones** (e.g.
+  "Moed A - Solution", a `פתרונות רשמיים` folder) translate (type: exam).
+
+Solution-like names outside BOTH the homework- and exam-solution contexts translate normally; the
+pre-pass drops every recorded skip on later runs. (The earlier "2 bootstrap `skipped_permanent`
+entries lack `source_md5` → re-enter once" caveat is **RESOLVED** — both were backfilled, commit
+`5e87909`; all 11 such entries are md5-backed and drop for free.)
+
+**Latest run — rename verification (`agent_20260614_202844`, 2026-06-14).** After the project
+rename, ran the agent end-to-end to confirm nothing broke. Pre-pass **scanned 213 → 1 worklist**;
+outcome **0 translated, 1 skip** (a handwritten homework solution, `עבודה 6.pdf`). **$0.092** routing
+only, **37.4s**, **0 refusals / 0 errors**. Auth, imports, loop, and routing all intact — the rename
+was docs-only. See HISTORY "Rename-verification live run".
 
 ## Deferred (not blocking)
 - Disk-persisted cache as the HARD save-after-translate guarantee (the soft
