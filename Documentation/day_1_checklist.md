@@ -48,8 +48,8 @@ Files that must NEVER be in the repo:
 ## Part 2 — Project & GitHub Repo (✅ done)
 
 ### Step 5–6: GitHub repo
-- ✅ Private repo `Agent_Translator_English_MD` created
-- ✅ Repo cloned to Mac at `/Users/sahar/Projects/Agent_Translator_English_MD`
+- ✅ Private repo `Targum.ai` created
+- ✅ Repo cloned to Mac at `/Users/sahar/Projects/Targum_ai`
 
 ### Step 7–8: Local project + Claude Code
 - ✅ Project folder open in VS Code
@@ -154,7 +154,7 @@ git push
 ## Day 1 Success Criteria — All Met ✅
 
 - ✅ Python, VS Code, Git, Claude Code installed and working (Mac)
-- ✅ `Agent_Translator_English_MD` repo exists, has commits
+- ✅ `Targum.ai` repo exists, has commits
 - ✅ `.env` contains Anthropic API key, NOT in Git
 - ✅ `credentials.json` and `token.json` exist, NOT in Git
 - ✅ Successful API call to Claude

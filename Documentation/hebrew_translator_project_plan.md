@@ -22,7 +22,7 @@ An AI agent that scans a Google Drive folder for Hebrew lecture materials, trans
 ### Storage & Sync
 - **Source**: Google Drive "iPad notebook" folder (read-only access)
 - **Destination**: Obsidian vault only (no write-back to Drive)
-- **Agent code**: Private GitHub repo (`Agent_Translator_English_MD`)
+- **Agent code**: Private GitHub repo (`Targum.ai`)
 - **Obsidian vault**: Separate private GitHub repo (for Phase 3 cloud sync)
 - **Folder structure**: Mirror Drive's organization, translated to English
 - **Vault path**: `/Users/saharsaygon/Documents/Obsidian Vault/` (Mac, current)
@@ -171,7 +171,7 @@ reports true total cost with the routing-vs-translation split.
 | Step | Task | Hours | Status |
 |------|------|-------|--------|
 | 1.1 | Install Python, VS Code, Git, Claude Code (Win + Mac) | 0.5 | ✅ |
-| 1.2 | Create GitHub account + private `Agent_Translator_English_MD` repo | 0.5 | ✅ |
+| 1.2 | Create GitHub account + private `Targum.ai` repo | 0.5 | ✅ |
 | 1.3 | Initialize local project folder, link to GitHub, configure `.gitignore` | 0.5 | ✅ |
 | 1.4 | Get Anthropic API key, store in `.env`, verify with "hello world" API call | 1 | ✅ |
 | 1.5 | Google Cloud Console setup: enable Drive API, create OAuth credentials, download `credentials.json` | 1.5 | ✅ |

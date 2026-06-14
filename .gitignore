@@ -17,3 +17,8 @@ __pycache__/
 # macOS metadata files (for when you switch to Mac)
 .DS_Store
 logs/
+
+# Personal build logs / planning — kept locally, not for the public repo
+Documentation/day_1_checklist.md
+Documentation/day_2_checklist.md
+Documentation/hebrew_translator_project_plan.md
