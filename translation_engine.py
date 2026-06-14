@@ -154,6 +154,7 @@ def translate_text_pdf(
     drive_filename: str,
     source_hash: str,
     today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+    model: str = MODEL,    # configured model; defaults to the module constant
     on_usage=None,         # optional callback(response, duration_ms) — cost-ledger hook
 ) -> dict:
     """
@@ -187,7 +188,7 @@ def translate_text_pdf(
     client = anthropic.Anthropic()
     _t0 = time.perf_counter()
     response = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=16000,
         system=_text_system_prompt(),   # translate-shared.md + translate-text-pdf.md (loaded per call)
         messages=[
@@ -215,7 +216,7 @@ def translate_text_pdf(
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cost_usd":      round(_calc_cost(usage), 6),
-        "model":         MODEL,
+        "model":         model,
         "mode":          "text",
     }
 
@@ -227,6 +228,7 @@ def translate_image_pdf(
     drive_filename: str,
     source_hash: str,
     today_date: str,       # e.g. "2026-05-18" — injected so Claude can't fabricate it
+    model: str = MODEL,    # configured model; defaults to the module constant
     on_usage=None,         # optional callback(response, duration_ms) — cost-ledger hook
 ) -> dict:
     """
@@ -285,7 +287,7 @@ def translate_image_pdf(
     client = anthropic.Anthropic()
     _t0 = time.perf_counter()
     response = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=16000,
         system=_image_system_prompt(),   # translate-shared.md + translate-image-pdf.md (loaded per call)
         messages=[{"role": "user", "content": content}],
@@ -300,7 +302,7 @@ def translate_image_pdf(
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cost_usd":      round(_calc_cost(usage), 6),
-        "model":         MODEL,
+        "model":         model,
         "mode":          "image",
     }
 

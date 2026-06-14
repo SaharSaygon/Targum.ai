@@ -1,0 +1,8 @@
+{
+  "_note": "Per-user, NON-SECRET config for the Targum.ai agent. Copy this file to config.json and fill in real values. Secrets (ANTHROPIC_API_KEY) stay in .env, NOT here. Once config.json exists the agent reads root_folder_id and vault_path from here; the .env keys DRIVE_SOURCE_FOLDER_ID and OBSIDIAN_VAULT_PATH are now superseded for the agent (the scripts/ bootstrap utility still reads them from .env).",
+  "root_folder_id": "<google-drive-folder-id-to-scan>",
+  "vault_path": "/absolute/path/to/your/Obsidian Vault",
+  "model": "claude-opus-4-8",
+  "spend_cap_usd": 5.0,
+  "tool_call_budget": 200
+}

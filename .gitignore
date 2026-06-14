@@ -3,6 +3,10 @@
 credentials.json
 token.json
 
+# Per-user config (non-secret, but machine-specific) — committed shape lives in
+# config.example.json; the real one stays local.
+config.json
+
 # Python bytecode cache — auto-generated, not source code
 __pycache__/
 *.pyc

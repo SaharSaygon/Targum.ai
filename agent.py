@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
+import config
 import costs
 import courses
 import dedup
@@ -20,7 +21,9 @@ from pdf_mode_detector import detect_pdf_mode
 load_dotenv()
 client = Anthropic()
 
-ROOT_FOLDER_ID = "1FoM5o24yoBJuvpdtoZ0waJGosS4wef6V"  # Semester ד׳ 2026 course root
+# Per-user config (root folder, vault path, model, budgets) lives in config.json,
+# loaded once at import. Secrets stay in .env. See config.py.
+CONFIG = config.load_config()
 SYSTEM_PROMPT = Path("agent_routing_prompt.md").read_text(encoding="utf-8")
 
 
@@ -311,6 +314,7 @@ def _translate_logic(inp, engine_fn, category):
             inp["drive_filename"],
             source_hash,
             today_date,
+            model=CONFIG.model,      # configured model, not the engine's hardcoded default
             on_usage=_on_usage,      # engine emits (response, duration_ms) → ledger
         )
     except RuntimeError as e:
@@ -401,7 +405,7 @@ def handle_save_to_vault(inp):
             cost_data=cost_data,
             chosen_mode=inp["chosen_mode"],
             mode_reasoning=inp["mode_reasoning"],
-            vault_path=Path(os.environ["OBSIDIAN_VAULT_PATH"]),
+            vault_path=Path(CONFIG.vault_path),
             detection_signals=signals,
             source_md5=source_md5,
             custom_subfolder=inp.get("custom_subfolder"),
@@ -516,8 +520,20 @@ def _set_cache_breakpoint(messages):
         content[-1]["cache_control"] = {"type": "ephemeral"}
 
 
-# --- run the loop only when executed directly; importable for tests ---
-if __name__ == "__main__":
+# --- the agent run, wrapped in a function so a future UI can drive it; still
+#     runnable directly via the __main__ guard at the bottom of the file. ---
+def run_agent(root_folder_id=None):
+    """Run one agent pass over a Drive folder tree.
+
+    root_folder_id is the per-run override seam: pass None (the default) to scan
+    the user's configured root (CONFIG.root_folder_id); the future UI's folder
+    selector passes a specific id instead. Persisting a changed id back to
+    config.json is the UI's call (config.save_config) — not done here.
+    """
+    global RUN_ID, LEDGER_PATH, CURRENT_TURN
+    if root_folder_id is None:
+        root_folder_id = CONFIG.root_folder_id
+
     # --- approved course mappings: read from courses.json (flat {hebrew: english}),
     #     injected into the kickoff so the agent reads them from run context. ---
     COURSES = courses.load_courses()
@@ -559,7 +575,7 @@ if __name__ == "__main__":
         return s if len(s) <= limit else s[:limit] + f"… [truncated {len(s) - limit} chars]"
 
     log(f"RUN START {run_start.strftime('%Y-%m-%d %H:%M:%S')} UTC")
-    log(f"ROOT_FOLDER_ID = {ROOT_FOLDER_ID}")
+    log(f"root_folder_id = {root_folder_id}")
     log("Approved course mappings:\n" + mappings_block)
 
     # --- deterministic pre-pass: diff the Drive tree against the manifest by md5
@@ -567,7 +583,7 @@ if __name__ == "__main__":
     #     the whole tree to walk. Unchanged files (translated, or deliberately
     #     skipped) drop out — absence from the worklist is the "unchanged" signal. ---
     print("Running deterministic pre-pass (md5 diff vs manifest)…")
-    worklist, total_scanned = prepass.build_worklist(ROOT_FOLDER_ID)
+    worklist, total_scanned = prepass.build_worklist(root_folder_id)
     log(f"PRE-PASS: scanned {total_scanned} files; {len(worklist)} new/changed → worklist")
     for item in worklist:
         path = "/".join(item["parent_path"] + [item["name"]])
@@ -603,7 +619,7 @@ if __name__ == "__main__":
 
     # --- THE LOOP — guarded by a 200 TOOL-CALL budget (not turns: one turn can
     #     dispatch many tool calls, so we count calls, not iterations). ---
-    TOOL_CALL_BUDGET = 200
+    TOOL_CALL_BUDGET = CONFIG.tool_call_budget
     tool_calls = 0
 
     # run-summary accumulators (structural roll-up of tool-derived events)
@@ -631,7 +647,7 @@ if __name__ == "__main__":
             _set_cache_breakpoint(messages)
             _t0 = time.perf_counter()
             response = client.messages.create(
-                model="claude-opus-4-8",
+                model=CONFIG.model,
                 max_tokens=4096,
                 system=SYSTEM_CACHED,
                 messages=messages,
@@ -799,3 +815,8 @@ if __name__ == "__main__":
         log(summary_text)
         log_f.close()
         print(f"\nFull audit log: {log_path}")
+
+
+# --- run the loop only when executed directly; importable for tests / a UI. ---
+if __name__ == "__main__":
+    run_agent()
