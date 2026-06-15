@@ -7,6 +7,41 @@ docs), translates PDFs to Markdown via the Claude API, and saves the results
 into an Obsidian vault. A content-hash manifest makes runs incremental — only
 new or changed Drive files are processed.
 
+## Cost: ~$9 → ~$0.30 per file
+
+The agent runs on a paid API, so every run costs money. I cut the per-file
+cost about 30× in three steps:
+
+1. **~$9 — the naive version.** Every run, the agent re-read the entire
+   Google Drive tree from scratch to decide what to do. It was re-paying to
+   re-think files it had already handled. (I caught this after one stretch of
+   re-runs cost ~$60.)
+
+2. **~$1.20 — caching and offloading.** As the agent works through a run, its
+   conversation keeps growing — the rules it follows, the list of tools it has,
+   and every folder it has visited. At each step the whole
+   conversation gets sent to the API again, so a longer conversation means a
+   bigger bill on every single step. **Caching** uses Anthropic's *prompt
+   caching*: on each call to the agent loop, the stable front of the
+   conversation (the system prompt, tool definitions, and the history built up
+   so far) is marked so the API reuses it instead of charging full price for it
+   again — the single biggest drop. **Offloading** is the companion trick: when
+   inspecting a file produces a lot of bulky detail, I keep that detail off to
+   the side and let the agent fetch it only if it actually needs it, instead of
+   dragging it through the rest of the conversation. Together these stop the
+   bill from ballooning as the run goes on.
+
+3. **~$0.30 — a cheap pre-check.** Before involving the (expensive) AI, a bit
+   of plain code compares the Drive files against a record of what's already
+   done, and hands the agent *only* the new or changed files. The AI never
+   looks at the unchanged ones, so there's almost nothing left to pay for.
+
+Translating one file always cost about $0.30 — that part never changed. All
+the savings came from cutting the wasted work *around* it: the agent
+re-reading folders and re-deciding things it had already settled. By the end,
+the per-file cost is essentially just the translation itself, with the
+overhead stripped away.
+
 ## Run
 
 ```bash
