@@ -18,6 +18,7 @@ from pathlib import Path
 import anthropic
 import pypdf
 from pdf2image import convert_from_bytes
+from PIL import Image
 
 import costs
 import manifest
@@ -31,6 +32,25 @@ MODEL = "claude-opus-4-8"
 # - High enough that cursive Hebrew letters are distinguishable
 # At 300 DPI the image data is 2.25× larger → 2.25× more vision tokens → 2.25× cost
 DPI = 200
+
+# Anthropic's vision API downscales any image whose long edge exceeds 1568px
+# (and caps requests with many images at 2000px per image). A 200-DPI A4 page is
+# ~1654×2339px — its long edge is already past 1568, so the API would shrink it
+# regardless, and in a many-page request it trips the 2000px hard limit outright
+# (the 400 "image dimensions exceed 2000px" failures on 4.pdf/12.pdf/2020A).
+# We therefore downscale to this cap OURSELVES before sending: it clears the hard
+# limit and loses no detail the API wasn't going to discard anyway.
+MAX_EDGE_PX = 1568
+
+# Image-mode output ceiling. A dense 20-plus-page handwritten lecture translates
+# to more than the old 16000-token cap — several Lior lectures hit exactly 16000
+# and were silently truncated mid-derivation. Opus 4.8 supports up to 128K output
+# tokens; we raise the ceiling well above any single lecture's real length. Cost
+# is billed per token actually generated, so a high cap costs nothing extra on
+# shorter files — it only stops the long ones from being cut off. Requests this
+# large must STREAM (the SDK times out on non-streaming calls above ~16K), which
+# translate_image_pdf now does.
+MAX_IMAGE_OUTPUT_TOKENS = 64000
 
 # Path(__file__) is the absolute path of *this file* on disk.
 # .parent strips the filename, leaving just the directory it lives in.
@@ -120,6 +140,21 @@ def vault_output_path(
     if subfolder:
         return vault_path / course_english / subfolder / f"{stem}_EN.md"
     return vault_path / course_english / f"{stem}_EN.md"
+
+
+def _downscale(image, max_edge: int = MAX_EDGE_PX):
+    """Shrink a PIL page image so its long edge is at most max_edge, preserving
+    aspect ratio. No-op if it already fits. LANCZOS is the high-quality
+    downsampling filter — important for keeping cursive Hebrew legible. Returns
+    the original image untouched when it's already within bounds, so pages that
+    don't need shrinking pay nothing.
+    """
+    w, h = image.size
+    longest = max(w, h)
+    if longest <= max_edge:
+        return image
+    scale = max_edge / longest
+    return image.resize((round(w * scale), round(h * scale)), Image.LANCZOS)
 
 
 def _pil_to_base64_png(image) -> str:
@@ -268,6 +303,11 @@ def translate_image_pdf(
     # Append one image block per page, after the instruction text.
     for i, img in enumerate(images):
         print(f"  Encoding page {i + 1}/{len(images)}...", end="\r", flush=True)
+        # Cap the long edge at MAX_EDGE_PX before encoding — keeps every page
+        # under the API's 2000px many-image limit (the cause of the earlier 400s)
+        # and trims request size, with no detail loss the API wasn't going to
+        # discard on its own.
+        img = _downscale(img)
         content.append(
             {
                 "type": "image",
@@ -286,12 +326,18 @@ def translate_image_pdf(
 
     client = anthropic.Anthropic()
     _t0 = time.perf_counter()
-    response = client.messages.create(
+    # Stream the response: MAX_IMAGE_OUTPUT_TOKENS is far above the SDK's
+    # non-streaming timeout threshold (~16K), so a plain messages.create would
+    # raise before the model finished a long lecture. messages.stream holds the
+    # connection open; get_final_message reassembles the full response (with
+    # usage) once the stream completes — same return shape as create().
+    with client.messages.stream(
         model=model,
-        max_tokens=16000,
+        max_tokens=MAX_IMAGE_OUTPUT_TOKENS,
         system=_image_system_prompt(),   # translate-shared.md + translate-image-pdf.md (loaded per call)
         messages=[{"role": "user", "content": content}],
-    )
+    ) as stream:
+        response = stream.get_final_message()
 
     duration_ms = (time.perf_counter() - _t0) * 1000
     usage = response.usage

@@ -5,6 +5,7 @@
 # helpers come later.
 import os
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -12,6 +13,15 @@ from googleapiclient.discovery import build
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 FOLDER_MIME = "application/vnd.google-apps.folder"
+
+# Native Google Editors files (Docs/Sheets/Slides) have no binary body — get_media
+# 403s with "Use Export with Docs Editors files". They must be fetched via
+# export_media, which renders them to a real format. We export to PDF so the file
+# rejoins the normal pipeline (hash → pdf_mode_detector → text/image translate)
+# exactly like a binary PDF. Any Google-native mime maps to PDF; unknown native
+# types fall through to PDF too (the safe, universally-supported export target).
+_GOOGLE_NATIVE_PREFIX = "application/vnd.google-apps."
+_EXPORT_MIME = "application/pdf"
 
 # Transient errors (dropped sockets, SSL resets, 5xx) over a long run must not
 # kill the loop. googleapiclient retries these with exponential backoff when
@@ -26,8 +36,14 @@ def get_credentials():
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                # Refresh token revoked/expired (invalid_grant): the cached token
+                # is dead, so drop it and fall back to a fresh interactive OAuth
+                # flow instead of crashing mid-run.
+                creds = None
+        if not creds or not creds.valid:
             flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
             creds = flow.run_local_server(port=0)
         with open("token.json", "w") as f:
@@ -61,8 +77,17 @@ def download_bytes(file_id):
     raising if it never completes — the caller (read_file_logic) turns the raise
     into status:'error' rather than translating a partial file."""
     meta = get_service().files().get(
-        fileId=file_id, fields="size"
+        fileId=file_id, fields="size, mimeType"
     ).execute(num_retries=_NUM_RETRIES)
+
+    # Native Google Editors files have no downloadable body — export them to PDF
+    # instead. export_media reports no size, so there's nothing to length-verify;
+    # the API returns the whole rendered PDF or raises (retried via num_retries).
+    if meta.get("mimeType", "").startswith(_GOOGLE_NATIVE_PREFIX):
+        return get_service().files().export_media(
+            fileId=file_id, mimeType=_EXPORT_MIME
+        ).execute(num_retries=_NUM_RETRIES)
+
     size = meta.get("size")
     expected = int(size) if size is not None else None  # Google-native files lack size
 
