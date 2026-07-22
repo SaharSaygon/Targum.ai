@@ -1017,3 +1017,139 @@ both authenticated with no re-auth prompt.
 Confirms the doc/brand rename left the agent loop, imports, auth, and routing fully
 intact. The run mutated `translated_log.json` (recorded that one file
 `skipped_permanent`) — normal, name-agnostic agent behavior.
+
+---
+
+## Repo housekeeping: personal build logs untracked (2026-06-14)
+
+Post-rename cleanup, three commits (`77c3e8f`, `23bd21a`, `11364ba`): the personal build
+logs — `day_1_checklist.md`, `day_2_checklist.md`, `hebrew_translator_project_plan.md` —
+were removed from tracking (added to `.gitignore`, `git rm --cached`) to keep them out of
+the public repo, and the dangling references to them in the remaining docs were dropped.
+Files still exist locally; docs-only change.
+
+---
+
+## Config externalized: config.json + typed loader (2026-06-15)
+
+Commit `2b416a7`. Non-secret per-user settings moved out of hardcoded literals into a
+gitignored `config.json`, read through a typed loader (`config.py`). Prerequisite for a
+future UI. Secrets stay in `.env` (`ANTHROPIC_API_KEY`); `credentials.json` / `token.json`
+untouched.
+
+- `config.py`: `load_config()` validates required keys (`root_folder_id`, `vault_path` —
+  no defaults) and optional keys (`model`, `spend_cap_usd`, `tool_call_budget` —
+  defaulted), returns a frozen `Config` dataclass; clear errors on missing file or
+  missing/wrong-typed key. `save_config()` persists changes back (for the UI; not
+  auto-called).
+- `agent.py`: loads `CONFIG` at import; the run is now `run_agent(root_folder_id=None)` —
+  the per-run override seam (None → `CONFIG.root_folder_id`). Replaces the hardcoded
+  `ROOT_FOLDER_ID`, `os.environ["OBSIDIAN_VAULT_PATH"]`, inline `"claude-opus-4-8"`, and
+  `TOOL_CALL_BUDGET`. `translation_engine`: `translate_*_pdf` take `model=MODEL`.
+- `spend_cap_usd` is carried in config only — **nothing enforces it yet** (out of scope).
+- `config.example.json` documents the shape; `test_config.py` — 11 tests, all passing.
+
+Same day (`8da4fea`): README gained a Cost section telling the ~30× per-file story —
+naive full-tree re-read (~$9/file) → prompt caching + signal offloading (~$1.20) →
+deterministic pre-pass (~$0.30).
+
+---
+
+## Steady-state incremental runs — the pre-pass model working as designed (2026-06-15 → 06-19)
+
+Four routine runs as the semester produced new files. The intended operating rhythm —
+pre-pass diffs the near-static tree, hands the loop a handful of new files — held with no
+intervention:
+
+| Run | Worklist | Translated | Skips | Total cost | Routing |
+|---|---|---|---|---|---|
+| `agent_20260615_174632` | 217 → 5 | 3 | 2 | $0.76 | $0.23 |
+| `agent_20260617_112308` | 220 → 4 | 3 | 1 | $1.70 | $0.22 |
+| `agent_20260618_164727` | 225 → 6 | 4 | 2 | $1.49 | $0.28 |
+| `agent_20260619_125912` | 225 → 4 | 3 | 1 | $1.22 | $0.22 |
+
+All six skips were the homework-solution rule firing correctly (עבוד+פתר context,
+handwritten signals — recognizability ~0, tokens/page ~0). 0 refusals, 0 errors, 0
+auto-names across all four. Routing cost is stable at ~$0.22–0.28 per incremental run —
+the pre-pass win holding in practice.
+
+---
+
+## Drive/engine fixes: Google-native export, OAuth refresh fallback, image-mode limits (2026-07-16)
+
+Commit `fbf419c`, fixing three real-world failures surfaced by the growing corpus:
+
+- **`drive.py`: Google-native files** (Docs/Sheets/Slides) now export to PDF via
+  `export_media` — `get_media` 403s on native files.
+- **`drive.py`: revoked refresh token** (`invalid_grant`) now recovers by falling back to
+  the interactive OAuth flow instead of crashing the run.
+- **`translation_engine.py`: image-mode limits** — page images pre-downscaled to 1568px
+  long edge to clear the API's 2000px multi-image hard limit; image-mode output cap raised
+  **16K → 64K tokens with streaming**, fixing **silent mid-derivation truncation** on long
+  lectures. (Echo of the Phase-1 truncation saga: truncation again presented as success;
+  again the fix is structural, not retry-based.)
+
+---
+
+## Catch-up run `agent_20260716_082722` (2026-07-16)
+
+First run in ~4 weeks; state committed in `810d16f`. Pre-pass handed a 26-file backlog.
+
+- **16 translated + saved** (13 image-mode / 3 text-mode), including a formula sheet routed
+  to `Reference/` via the `custom_subfolder` escape hatch — first live use.
+- **8 deliberate skips**: 7 handwritten homework solutions, and the **first live firing of
+  the exam-solution ownership rule** — a file under a `פתרונות שלי` (my solutions) marker
+  skipped regardless of signals, exactly as designed 2026-06-14.
+- **`fetch_signal_detail`: first real calls ever (2)** — the KEEP-with-note retention
+  decision paid off; the ambiguous typed-vs-handwritten case it was kept for finally
+  occurred.
+- Cost **$7.24** (routing $1.26 / translation $5.98), 69/200 tool calls, ~42 min,
+  0 refusals, 0 errors.
+- `courses.json` gained a hand-added mapping: the "translate this for my friend Lior"
+  folder → "Lior's Course" — first non-university content in scope.
+
+---
+
+## Exam-prep influx + the לתרגם TRANSLATE OVERRIDE (2026-07-20)
+
+The Drive tree jumped to **436 files** — a large solved-exam corpus for Introduction to
+Semiconductor Devices (מבחנים/פתור) landed for exam prep.
+
+**Run `agent_20260720_151507`:** 436 scanned → **50 worklist**; **35 translated**
+(29 text / 7 image, incl. one text-mode refusal on garbled extraction that the agent
+correctly retried in image mode — the refusal→image-retry path working as designed),
+**12 deliberate skips**, $8.69 total (routing $3.34), 134/200 tool calls.
+
+**The collision:** 11 of those 12 skips were the user's own solved exams (מבחנים/פתור,
+handwritten signals) — skipped *correctly per the 2026-06-14 ownership rule*, but this
+time the user **wanted** them translated (they're the exam-prep material). The rule was
+right in general and wrong for this corpus: "own solutions" isn't always "don't translate".
+
+**Resolution — explicit user override, not a rule reversal.** New `TRANSLATE OVERRIDE`
+bullet in `agent_routing_prompt.md`: a path segment containing the stem **לתרגם**
+("to translate", e.g. a folder renamed `פתור-לתרגם`) is an explicit user instruction that
+OVERRIDES both solution-skip cases — never `skip_file` under a לתרגם segment; ownership
+markers and handwritten signals are ignored; normal type/mode rules still apply (the
+handwritten scans route to image mode as usual). Both skip cases stay in force everywhere
+else. The user renamed the Drive folder to `פתור-לתרגם` and re-ran:
+
+- `agent_20260720_203405`: 436 → 14; **9 solved exams translated** (all image mode),
+  $3.84, ~22 min.
+- `agent_20260720_212411`: 436 → 5; the remaining **2 translated**, $1.40.
+
+All 11 previously-skipped solved exams are now in the vault. The prompt edit is
+**uncommitted** as of this entry.
+
+---
+
+## Routine runs `agent_20260722_*` (2026-07-22)
+
+- `agent_20260722_143216`: 438 scanned → 5; **2 translated** — two מל״מ exam-prep
+  tutorials (עזרתון), image mode, $2.20.
+- `agent_20260722_145826`: 446 scanned → 12; **9 translated** — 7 reconstructed exams
+  (מבחן_משוחזר), one exam note, and a re-translation of one עזרתון whose source bytes
+  changed since the morning run (md5 gate caught the edit, as designed). $3.60, ~21 min.
+
+0 refusals, 0 errors, 0 skips on both. Manifest after these runs: **467 entries** —
+369 `claude-opus-4-8`, 35 `manual`, 15 `claude-opus-4-7`, **48 `skipped_permanent`**.
+Manifest state (July 20 + 22 runs) is uncommitted alongside the לתרגם prompt edit.
