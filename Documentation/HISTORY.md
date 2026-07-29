@@ -1193,3 +1193,47 @@ TRANSLATE session (system = the skills, exactly today's engine composition; outp
 via the Write tool, killing the 64K-truncation bug class). Also decided: repo reorg
 into `core/` + `legacy/` + `sdk/` ahead of the port, and default model →
 **`claude-opus-5`** on both paths.
+
+---
+
+## Subscription port landed + first SDK run (2026-07-29)
+
+One session implemented the whole approved plan, in four commits:
+
+1. **Reorg** (`3861ee1`): flat root → `core/` + `legacy/` + `sdk/` (+`tests/`).
+   New `core/paths.py` (CWD-independent path anchors), `core/vault.py`
+   (save-to-vault executor + skill loading + manifest-entry recorders, split out
+   of translation_engine), `core/pdf_images.py` (rasterise pipeline). Missing
+   manifest became a hard error — the old silent-[] fallback would have
+   re-translated the entire tree after any path mistake.
+2. **Opus 5 default** (`3c4056a`): `claude-opus-5` everywhere; legacy text mode
+   streams at 32K (opus-5 thinks by default inside max_tokens); classifier
+   refusals (stop_reason "refusal") map onto the REFUSED: contract; text-block
+   extraction no longer assumes content[0].
+3. **SDK path** (`09ae392`): Shape D — per file, prepare (code) → ROUTE session
+   (routing prompt only, structured decision, fetch_signal_detail in-process
+   MCP) → TRANSLATE session (skills only, Writes the .md to the vault) →
+   record (code). Refusal/extraction failures loop back through a route session
+   so the model keeps the retry/skip judgment. `auth_mode` + `concurrency`
+   config keys; ANTHROPIC_API_KEY is stripped from the env in subscription mode.
+
+**Validation:** 21 unit tests green; live routing regression 4/4 (ownership
+skip, לתרגם override, שלי marker, image rubric) — decisions matched the July
+manifest history, and route sessions 2–4 hit the shared prompt-cache prefix
+(cache_read 5.7K each). First live run `agent_sdk_20260729_154820`: 466 scanned
+→ 10 worklist → **1 translated** (scanned exam reconstruction, image mode,
+Written by the session and verified on disk; manifest model
+`subscription:claude-opus-5`), **4 ownership skips** (new פתרונות שלי files),
+**3 already_done** (hash-dedup), 0 errors, 255s at concurrency 3. Tokens
+in/cw/cr/out = 14/67848/28690/12673 — dollars: none (subscription).
+
+**Found live:** the shared googleapiclient service corrupted concurrent
+downloads under `asyncio.to_thread` ('NoneType' .read / SSL record-layer
+failures; the first attempt of the run died silently mid-fan-out). The per-file
+retry + per-file manifest checkpoint absorbed every failure exactly as designed
+— nothing was lost, the re-run picked up the remainder. Root fix: per-thread
+Drive service objects (`core/drive.py`), credentials still created once.
+
+Manifest after: **487 entries** — 378 `claude-opus-4-8`,
+**1 `subscription:claude-opus-5`** (the first), 35 `manual`,
+15 `claude-opus-4-7`, 58 `skipped_permanent`.

@@ -64,23 +64,41 @@ the md5 change-detection gate (re-translated an edited source same-day, 2026-07-
 Routine incremental runs hold at ~$0.2–0.5 routing; the big catch-up/influx runs are
 the outliers. 0 errors across all runs; the one refusal was handled correctly.
 
+## Subscription port LANDED (2026-07-29)
+
+The plan of `Documentation/subscription_and_cron_plan.md` (as revised 2026-07-29)
+is implemented and live:
+
+- **Repo reorg**: `core/` (shared modules incl. new `paths.py`, `vault.py`,
+  `pdf_images.py`) + `legacy/` (API pay-per-token path) + `sdk/` (subscription
+  path). State files stay at root; a missing manifest is now a HARD error
+  (silent-[] would have re-translated the tree). Entry points:
+  `python -m sdk.agent_sdk` (default) / `python -m legacy.agent` (fallback).
+- **Default model `claude-opus-5`** on both paths (legacy text mode now streams
+  at 32K for opus-5's default thinking; API-classifier refusals map onto the
+  REFUSED: contract).
+- **Shape D, two sessions per file**: ROUTE session (system =
+  `agent_routing_prompt.md` only — ALL routing judgment stays with the model,
+  structured decision out) then, when translating, a just-in-time TRANSLATE
+  session (system = the skills, exactly the legacy engine composition; the .md
+  is Written straight to the vault — the 64K-truncation bug class is gone).
+  Python owns loop/retries/recording; `concurrency: 3` files in flight;
+  `auth_mode: "subscription" | "api"` in config.
+
+**Validated 2026-07-29:** 10/10 new unit tests; 4/4 live routing-regression
+cases (ownership skip, לתרגם override, שלי marker, image-mode rubric) with
+cross-session prompt-cache hits; first live run `agent_sdk_20260729_154820` —
+10-file worklist → 1 translated + 4 ownership skips + 3 dedup, 0 errors, 255s.
+Found live and fixed: googleapiclient service is not thread-safe under the
+concurrent fan-out → per-thread services in `core/drive.py`.
+
 ## Next step
 
-**Subscription port approved (2026-07-29)** — see
-`Documentation/subscription_and_cron_plan.md` for the original two-task plan, revised
-by three decisions made 2026-07-29:
-
-1. **Shape D, two sessions per file** (supersedes the plan doc's subagent-per-file
-   option C): Python orchestrates the pre-pass worklist; per file a ROUTE session
-   (system = `agent_routing_prompt.md` only, full model routing judgment retained)
-   then, if translating, a TRANSLATE session (system = skills only, just-in-time —
-   today's engine composition; output via the Write tool). 3–4 files in flight.
-2. **Repo reorg**: `core/` (shared modules) + `legacy/` (API path) + `sdk/`
-   (subscription path); state files stay at root as the single source of truth.
-3. **Default model → `claude-opus-5`** on both paths.
-
-Task 2 (launchd automation) follows after the port lands. `spend_cap_usd`
-enforcement moves into the Task 2 prerequisites (api-mode-only).
+**Task 2 — launchd automation** (agreed 2026-07-29, sequenced in
+subscription_and_cron_plan.md): prerequisites first (`skipped_transient` +
+error states, run-summary notification, `spend_cap_usd` enforcement for the
+api fallback), then wrapper script + plist. Before scheduling: one
+influx-scale supervised SDK run.
 
 ## Deferred (not blocking)
 - Disk-persisted cache as the HARD save-after-translate guarantee (the soft
