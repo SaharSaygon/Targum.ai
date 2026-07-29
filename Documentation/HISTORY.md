@@ -1153,3 +1153,43 @@ All 11 previously-skipped solved exams are now in the vault. The prompt edit is
 0 refusals, 0 errors, 0 skips on both. Manifest after these runs: **467 entries** —
 369 `claude-opus-4-8`, 35 `manual`, 15 `claude-opus-4-7`, **48 `skipped_permanent`**.
 Manifest state (July 20 + 22 runs) is uncommitted alongside the לתרגם prompt edit.
+
+---
+
+## Run `agent_20260724_173440` (2026-07-24) — influx + all skip rules firing together
+
+461 scanned → **26 worklist**; **18 translated** (17 image / 1 text — עזרתון help
+sessions and exam reconstructions for Semiconductor Devices), **5 deliberate skips**,
+**3 `already_done`** via hash-dedup (same bytes already in the vault under different
+Drive metadata). $14.16 total (routing $1.52, translation $12.63), 67/200 tool calls,
+~73 min. 0 refusals, 0 errors.
+
+Notable: every routing rule fired correctly in one run — 4 ownership skips
+(`פתרונות שלי`), 1 signal-decided handwritten פתר skip, and the לתרגם override
+correctly split two duplicate-content files (the copy under a לתרגם segment was
+translated, the copy under `פתרונות שלי` skipped). 0 `fetch_signal_detail`,
+0 `list_folder`, 0 `update_mapping` calls — pure per-file decision-table routing.
+
+Manifest after: **482 entries** — 379 `claude-opus-4-8`, 35 `manual`,
+15 `claude-opus-4-7`, **53 `skipped_permanent`**.
+
+---
+
+## Subscription port decided (2026-07-27 → 2026-07-29)
+
+2026-07-27: drafted `Documentation/subscription_and_cron_plan.md` — Task 1 (run on the
+owner's Claude Max subscription via the Claude Agent SDK, `CLAUDE_CODE_OAUTH_TOKEN`)
++ Task 2 (launchd-scheduled unattended runs, cadence via `run_interval_days`).
+
+2026-07-29: shape decision finalized after comparing the plan doc's subagent-per-file
+(one long-lived orchestrating session) against **session-per-file (Shape D)** — chosen
+because the worklist is already computed deterministically by the pre-pass, so
+code-orchestrated workflow + LLM workers is the fitting architecture: the loop,
+retries, concurrency (3–4 in flight), and manifest recording are Python; ALL per-file
+routing judgment stays with the model. Refined to **two sessions per file** after the
+owner correctly objected to bundling the routing prompt with translation skills:
+a ROUTE session (system = `agent_routing_prompt.md` only) and a just-in-time
+TRANSLATE session (system = the skills, exactly today's engine composition; output
+via the Write tool, killing the 64K-truncation bug class). Also decided: repo reorg
+into `core/` + `legacy/` + `sdk/` ahead of the port, and default model →
+**`claude-opus-5`** on both paths.

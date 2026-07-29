@@ -5,7 +5,7 @@
 > identifier with the dot). No code/module names changed by the rename. See HISTORY
 > "Project rename: → Targum.ai / Targum_ai (2026-06-14)".
 
-*Last updated: 2026-07-22.*
+*Last updated: 2026-07-29.*
 
 ## Current state
 
@@ -16,10 +16,10 @@ records autonomously. **8 tools** unchanged: `list_folder`, `read_file`,
 `translate_text_pdf`, `translate_image_pdf`, `save_to_vault`, `update_mapping`,
 `fetch_signal_detail`, `skip_file`.
 
-The Drive tree has grown **213 → 446 files** (a solved-exam corpus for Introduction to
+The Drive tree has grown **213 → 461 files** (a solved-exam corpus for Introduction to
 Semiconductor Devices landed for exam prep, plus first non-university content —
-"Lior's Course"). The manifest holds **467 entries**: 369 `claude-opus-4-8`, 35 `manual`,
-15 `claude-opus-4-7`, **48 `skipped_permanent`** (all md5-backed — the pre-pass drops
+"Lior's Course"). The manifest holds **482 entries**: 379 `claude-opus-4-8`, 35 `manual`,
+15 `claude-opus-4-7`, **53 `skipped_permanent`** (all md5-backed — the pre-pass drops
 every skip for free).
 
 **Config externalized (2026-06-15, `2b416a7`).** Per-user settings (`root_folder_id`,
@@ -59,19 +59,28 @@ the md5 change-detection gate (re-translated an edited source same-day, 2026-07-
 | `agent_20260720_212411` | 5 | 2 | 0 | $1.40 | remaining solved exams |
 | `agent_20260722_143216` | 5 | 2 | 0 | $2.20 | עזרתון tutorials |
 | `agent_20260722_145826` | 12 | 9 | 0 | $3.60 | reconstructed exams |
+| `agent_20260724_173440` | 26 | 18 | 5 | $14.16 | עזרתון + exam-reconstruction influx; 3 hash-dedup `already_done`; 4 ownership + 1 handwritten skip; לתרגם override correctly split duplicate-content copies |
 
-Routine incremental runs hold at ~$0.2–0.5 routing; the two big catch-up/influx runs are
+Routine incremental runs hold at ~$0.2–0.5 routing; the big catch-up/influx runs are
 the outliers. 0 errors across all runs; the one refusal was handled correctly.
 
 ## Next step
 
-**Immediate housekeeping — commit the pending state:** `agent_routing_prompt.md` (the
-לתרגם TRANSLATE OVERRIDE rule) and `translated_log.json` (the July 20 + 22 runs) are
-modified and uncommitted.
+**Subscription port approved (2026-07-29)** — see
+`Documentation/subscription_and_cron_plan.md` for the original two-task plan, revised
+by three decisions made 2026-07-29:
 
-Then: **Phase 2 entry** (see PHASE2_NOTES). Also consider enforcing `spend_cap_usd` —
-it's in config but nothing reads it, and the July catch-up runs show single-run spend can
-reach ~$9.
+1. **Shape D, two sessions per file** (supersedes the plan doc's subagent-per-file
+   option C): Python orchestrates the pre-pass worklist; per file a ROUTE session
+   (system = `agent_routing_prompt.md` only, full model routing judgment retained)
+   then, if translating, a TRANSLATE session (system = skills only, just-in-time —
+   today's engine composition; output via the Write tool). 3–4 files in flight.
+2. **Repo reorg**: `core/` (shared modules) + `legacy/` (API path) + `sdk/`
+   (subscription path); state files stay at root as the single source of truth.
+3. **Default model → `claude-opus-5`** on both paths.
+
+Task 2 (launchd automation) follows after the port lands. `spend_cap_usd`
+enforcement moves into the Task 2 prerequisites (api-mode-only).
 
 ## Deferred (not blocking)
 - Disk-persisted cache as the HARD save-after-translate guarantee (the soft
