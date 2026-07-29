@@ -4,5 +4,7 @@
   "vault_path": "/absolute/path/to/your/Obsidian Vault",
   "model": "claude-opus-5",
   "spend_cap_usd": 5.0,
-  "tool_call_budget": 200
+  "tool_call_budget": 200,
+  "auth_mode": "subscription",
+  "concurrency": 3
 }

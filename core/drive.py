@@ -55,15 +55,27 @@ def get_credentials():
 
 # Built lazily on first use (not at import) so `import drive` doesn't trigger
 # OAuth — keeps Drive logic importable without credentials (tests, pre-pass).
-# Built ONCE then reused for every call — no re-auth mid-run.
-_service = None
+# Credentials are created ONCE (no re-auth mid-run, lock so a cold start can't
+# trigger two interactive OAuth flows); the service object is PER-THREAD —
+# googleapiclient services ride on httplib2, which is not thread-safe, and the
+# SDK path downloads concurrently via asyncio.to_thread (a shared service there
+# fails with corrupted responses, e.g. "'NoneType' object has no attribute
+# 'read'").
+_creds = None
+_creds_lock = threading.Lock()
+_local = threading.local()
 
 
 def get_service():
-    global _service
-    if _service is None:
-        _service = build("drive", "v3", credentials=get_credentials())
-    return _service
+    service = getattr(_local, "service", None)
+    if service is None:
+        global _creds
+        with _creds_lock:
+            if _creds is None:
+                _creds = get_credentials()
+        service = build("drive", "v3", credentials=_creds)
+        _local.service = service
+    return service
 
 
 def download_bytes(file_id):

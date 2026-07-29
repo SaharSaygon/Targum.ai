@@ -23,6 +23,12 @@ _DEFAULTS = {
     "model": "claude-opus-5",
     "spend_cap_usd": 5.00,
     "tool_call_budget": 200,
+    # subscription = Claude Agent SDK billed to the owner's Claude plan (sdk/);
+    # api = pay-per-token Anthropic API path (legacy/). spend_cap_usd applies to
+    # api mode only.
+    "auth_mode": "subscription",
+    # Concurrent per-file session pipelines in the SDK path (3–4 recommended).
+    "concurrency": 3,
 }
 
 # Required keys must be present and correctly typed (and non-empty for strings).
@@ -37,6 +43,8 @@ _OPTIONAL = {
     "model": str,
     "spend_cap_usd": (int, float),
     "tool_call_budget": int,
+    "auth_mode": str,
+    "concurrency": int,
 }
 
 
@@ -51,6 +59,8 @@ class Config:
     model: str
     spend_cap_usd: float
     tool_call_budget: int
+    auth_mode: str
+    concurrency: int
 
 
 def _type_names(typ) -> str:
@@ -119,6 +129,17 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
 
     # Stable type: spend_cap_usd is always a float even if written as an int.
     values["spend_cap_usd"] = float(values["spend_cap_usd"])
+
+    if values["auth_mode"] not in ("subscription", "api"):
+        raise ConfigError(
+            f"Key 'auth_mode' in {path} must be 'subscription' or 'api', "
+            f"got {values['auth_mode']!r}."
+        )
+    if values["concurrency"] < 1:
+        raise ConfigError(
+            f"Key 'concurrency' in {path} must be a positive integer, "
+            f"got {values['concurrency']!r}."
+        )
 
     return Config(**values)
 

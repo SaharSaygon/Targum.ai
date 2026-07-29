@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
-from core import config, costs, courses, dedup, drive, manifest, prepass
+from core import config, costs, courses, dedup, drive, manifest, prepass, vault
 from core.paths import ENV_PATH, LOGS_DIR, ROUTING_PROMPT_PATH
 from core.pdf_mode_detector import detect_pdf_mode
 from legacy import translation_engine as engine
@@ -436,28 +436,14 @@ def handle_skip_file(inp):
     same schema the bootstrap writes for skipped_permanent."""
     source_hash = inp["source_hash"]
     source_md5 = CONTENT_CACHE.get(f"{source_hash}:md5")
-    entry = {
-        "drive_file_id":       inp["drive_file_id"],
-        "drive_file_name":     inp["drive_filename"],
-        "source_content_hash": source_hash,
-        "md_path":             None,
-        "course":              None,
-        "type":                None,
-        "translated_at":       None,
-        "model":               "skipped_permanent",
-        "skip_reason":         inp["skip_reason"],
-        "cost_usd":            0,
-        "input_tokens":        0,
-        "output_tokens":       0,
-    }
-    # source_md5 only when present (binary PDFs have it; native Google Docs don't).
-    # Without it the pre-pass can't md5-skip the file — it'd fall to the loop, which
-    # still dedups by content hash. So it's an optimization, not a correctness need.
-    if source_md5 is not None:
-        entry["source_md5"] = source_md5
-    entries = manifest.load_log()
-    entries = manifest.upsert_entry(entries, entry)
-    manifest.save_log(entries)
+    # Entry schema lives in core.vault.record_skip — shared with the SDK path.
+    vault.record_skip(
+        drive_file_id=inp["drive_file_id"],
+        drive_filename=inp["drive_filename"],
+        source_hash=source_hash,
+        skip_reason=inp["skip_reason"],
+        source_md5=source_md5,
+    )
     return json.dumps({"status": "skipped_permanent",
                        "drive_file_id": inp["drive_file_id"],
                        "skip_reason": inp["skip_reason"]}, ensure_ascii=False)

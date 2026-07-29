@@ -17,6 +17,8 @@ VALID = {
     "model": "claude-opus-4-8",
     "spend_cap_usd": 5.0,
     "tool_call_budget": 200,
+    "auth_mode": "api",
+    "concurrency": 2,
 }
 
 
@@ -71,6 +73,8 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(cfg.model, "claude-opus-5")
         self.assertEqual(cfg.spend_cap_usd, 5.00)
         self.assertEqual(cfg.tool_call_budget, 200)
+        self.assertEqual(cfg.auth_mode, "subscription")
+        self.assertEqual(cfg.concurrency, 3)
 
     def test_wrong_type_names_offending_key(self):
         data = {**VALID, "tool_call_budget": "lots"}

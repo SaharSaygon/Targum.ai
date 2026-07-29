@@ -137,8 +137,42 @@ def save_to_vault(
 
     md_path_relative = str(target.relative_to(vault_path))
 
-    # 3. Manifest — only after the .md is safely on disk. upsert_entry matches by
-    #    drive_file_id and replaces in place (manifest.py owns that contract).
+    # 3. Manifest — only after the .md is safely on disk.
+    record_translation(
+        drive_file_id=drive_file_id,
+        drive_filename=drive_filename,
+        source_hash=source_hash,
+        md_path_relative=md_path_relative,
+        course_english=course_english,
+        type_value=type_value,
+        cost_data=cost_data,
+        chosen_mode=chosen_mode,
+        mode_reasoning=mode_reasoning,
+        detection_signals=detection_signals,
+        source_md5=source_md5,
+    )
+
+    return {"status": "saved", "md_path": md_path_relative}
+
+
+def record_translation(
+    drive_file_id: str,
+    drive_filename: str,
+    source_hash: str,
+    md_path_relative: str,
+    course_english: str,
+    type_value: str,
+    cost_data: dict,
+    chosen_mode: str,
+    mode_reasoning: str,
+    detection_signals: dict | None = None,
+    source_md5: str | None = None,
+) -> dict:
+    """Upsert a translated-file manifest entry. The single owner of the entry
+    schema — used by save_to_vault (legacy path, which also writes the .md) and
+    by the SDK path (where the translate session already Wrote the .md and code
+    only records). upsert_entry matches by drive_file_id and replaces in place.
+    """
     entry = {
         "drive_file_id":       drive_file_id,
         "drive_file_name":     drive_filename,
@@ -166,5 +200,39 @@ def save_to_vault(
     entries = manifest.load_log()
     entries = manifest.upsert_entry(entries, entry)
     manifest.save_log(entries)
+    return entry
 
-    return {"status": "saved", "md_path": md_path_relative}
+
+def record_skip(
+    drive_file_id: str,
+    drive_filename: str,
+    source_hash: str,
+    skip_reason: str,
+    source_md5: str | None = None,
+) -> dict:
+    """Upsert a skipped_permanent manifest entry (deliberate, rule-based skip).
+
+    Mirrors legacy handle_skip_file's entry shape: a translated entry with the
+    translation fields nulled/zeroed. source_md5 when present lets the pre-pass
+    md5-skip the file next run; without it the loop still dedups by content hash.
+    """
+    entry = {
+        "drive_file_id":       drive_file_id,
+        "drive_file_name":     drive_filename,
+        "source_content_hash": source_hash,
+        "md_path":             None,
+        "course":              None,
+        "type":                None,
+        "translated_at":       None,
+        "model":               "skipped_permanent",
+        "skip_reason":         skip_reason,
+        "cost_usd":            0,
+        "input_tokens":        0,
+        "output_tokens":       0,
+    }
+    if source_md5 is not None:
+        entry["source_md5"] = source_md5
+    entries = manifest.load_log()
+    entries = manifest.upsert_entry(entries, entry)
+    manifest.save_log(entries)
+    return entry
