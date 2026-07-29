@@ -9,7 +9,8 @@ JSON line to the run ledger, and returns the row so the caller can roll it up.
 import json
 from datetime import datetime, timezone
 
-# Claude Opus 4.8 pricing — USD per 1e6 tokens. The four token classes are
+# Opus-tier pricing (identical for claude-opus-4-8 and claude-opus-5) — USD per
+# 1e6 tokens. The four token classes are
 # DISJOINT in the Anthropic usage object (input_tokens already EXCLUDES the
 # cached ones), so each is multiplied by its own rate and the products are summed
 # — never subtract one class from another.
@@ -25,7 +26,7 @@ OUTPUT = 25.0
 CACHE_WRITE_5M = 6.25
 CACHE_READ = 0.50
 
-DEFAULT_MODEL = "claude-opus-4-8"
+DEFAULT_MODEL = "claude-opus-5"
 
 
 def _get(usage, name):

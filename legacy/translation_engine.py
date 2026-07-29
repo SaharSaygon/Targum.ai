@@ -32,7 +32,13 @@ from core.vault import (  # noqa: F401 — re-exported for legacy/agent.py
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-MODEL = "claude-opus-4-8"
+MODEL = "claude-opus-5"
+
+# On claude-opus-5 thinking is ON by default and counts against max_tokens, so
+# the old 16000 non-streaming text-mode cap risks truncating the visible answer.
+# Text mode therefore streams (like image mode) with headroom above any real
+# translation length.
+MAX_TEXT_OUTPUT_TOKENS = 32000
 
 # Image-mode output ceiling. A dense 20-plus-page handwritten lecture translates
 # to more than the old 16000-token cap — several Lior lectures hit exactly 16000
@@ -54,6 +60,25 @@ MAX_IMAGE_OUTPUT_TOKENS = 64000
 
 def _calc_cost(usage) -> float:
     return costs.tiered_cost(usage, MODEL)
+
+
+def _markdown_or_refusal(response) -> str:
+    """Extract the translated markdown, mapping an API-level safety-classifier
+    decline (claude-opus-5's stop_reason "refusal" — HTTP 200, possibly empty
+    content) onto the existing REFUSED: first-line contract, so the routing
+    layer's refusal→image-retry / skip logic applies unchanged.
+    """
+    if getattr(response, "stop_reason", None) == "refusal":
+        detail = ""
+        sd = getattr(response, "stop_details", None)
+        if sd is not None:
+            category = getattr(sd, "category", None)
+            explanation = getattr(sd, "explanation", None)
+            detail = " — " + "; ".join(s for s in (category, explanation) if s)
+        return f"REFUSED: API safety classifier declined this request{detail}"
+    # First TEXT block, not content[0]: with opus-5's default thinking the
+    # content list can begin with a thinking block.
+    return next(b.text for b in response.content if b.type == "text")
 
 
 # ── Translation functions ──────────────────────────────────────────────────────
@@ -98,9 +123,12 @@ def translate_text_pdf(
     # The caller must have run load_dotenv() before calling this function.
     client = anthropic.Anthropic()
     _t0 = time.perf_counter()
-    response = client.messages.create(
+    # Stream (like image mode): MAX_TEXT_OUTPUT_TOKENS exceeds the SDK's
+    # non-streaming timeout threshold (~16K), and opus-5's default thinking
+    # shares the max_tokens budget with the answer.
+    with client.messages.stream(
         model=model,
-        max_tokens=16000,
+        max_tokens=MAX_TEXT_OUTPUT_TOKENS,
         system=text_system_prompt(),   # translate-shared.md + translate-text-pdf.md (loaded per call)
         messages=[
             {
@@ -116,14 +144,15 @@ def translate_text_pdf(
                 ),
             }
         ],
-    )
+    ) as stream:
+        response = stream.get_final_message()
 
     duration_ms = (time.perf_counter() - _t0) * 1000
     usage = response.usage
     if on_usage is not None:
         on_usage(response, duration_ms)
     return {
-        "markdown":      response.content[0].text,  # [0] because Claude always returns at least one TextBlock
+        "markdown":      _markdown_or_refusal(response),
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cost_usd":      round(_calc_cost(usage), 6),
@@ -206,7 +235,7 @@ def translate_image_pdf(
     if on_usage is not None:
         on_usage(response, duration_ms)
     return {
-        "markdown":      response.content[0].text,
+        "markdown":      _markdown_or_refusal(response),
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
         "cost_usd":      round(_calc_cost(usage), 6),

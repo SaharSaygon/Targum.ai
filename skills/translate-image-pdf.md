@@ -8,4 +8,4 @@ Where the shared rules bite hardest — reference, do not restate:
 - Refuse-rather-than-reconstruct (skills/translate-shared.md → Unreadable Source Material): image mode is the path that actually faces illegible handwriting and degraded scans, so it is where fabrication is most tempting and most damaging — the Lecture 4 failure (a handwritten page fabricated instead of refused) is why this rule matters most here.
 - Blank box / unfilled placeholder (skills/translate-shared.md): image mode is the path that literally sees the student-fill boxes and empty template fields, so the pull to complete them is strongest here — the same Lecture 4 lesson applies.
 
-Call mechanics: max_tokens=16000, model Opus 4.8 (claude-opus-4-8); capture input/output token cost from response.usage.
+Call mechanics: streamed, max_tokens=64000, model Opus 5 (claude-opus-5); capture input/output token cost from response.usage.

@@ -8,4 +8,4 @@ The refuse-rather-than-reconstruct rule (skills/translate-shared.md → Unreadab
 
 For output format, YAML frontmatter, figure handling (text mode is always the "cannot see the figure" case in skills/translate-shared.md), glossary, and the refusal rules — follow skills/translate-shared.md. Not restated here.
 
-Call mechanics: max_tokens=16000, model Opus 4.8 (claude-opus-4-8); capture input/output token cost from response.usage.
+Call mechanics: streamed, max_tokens=32000, model Opus 5 (claude-opus-5); capture input/output token cost from response.usage.

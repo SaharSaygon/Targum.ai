@@ -68,7 +68,7 @@ class LoadConfigTests(unittest.TestCase):
         data = {"root_folder_id": "abc123", "vault_path": "/tmp/vault"}
         with tempfile.TemporaryDirectory() as d:
             cfg = config.load_config(_write(d, data))
-        self.assertEqual(cfg.model, "claude-opus-4-8")
+        self.assertEqual(cfg.model, "claude-opus-5")
         self.assertEqual(cfg.spend_cap_usd, 5.00)
         self.assertEqual(cfg.tool_call_budget, 200)
 

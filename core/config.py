@@ -20,7 +20,7 @@ from core.paths import CONFIG_PATH
 # Optional keys → their defaults. Required keys are deliberately absent here:
 # they must be present in config.json, with no silent fallback.
 _DEFAULTS = {
-    "model": "claude-opus-4-8",
+    "model": "claude-opus-5",
     "spend_cap_usd": 5.00,
     "tool_call_budget": 200,
 }
