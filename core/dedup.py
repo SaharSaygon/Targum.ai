@@ -12,7 +12,7 @@ decides.
 Verdict shapes are copied byte-for-byte from the original inline branches — same
 keys, same values — so behavior is identical.
 """
-from manifest import find_by_id
+from core.manifest import find_by_id
 
 # Sentinel meaning "no dedup hit — caller should keep going (download / detect)".
 # Never surfaced to the agent: read_file_logic checks for status == "already_done"

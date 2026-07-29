@@ -12,12 +12,8 @@ read_file (dedup reads) and save_to_vault (writes) are expected to use this too.
 import hashlib
 import json
 import os
-from pathlib import Path
 
-# The manifest lives next to this module at the project root, matching the path
-# the previous per-script helpers resolved (PROJECT_ROOT / "translated_log.json").
-_PROJECT_ROOT = Path(__file__).parent
-LOG_PATH = _PROJECT_ROOT / "translated_log.json"
+from core.paths import LOG_PATH
 
 
 def sha256_of(data: bytes) -> str:
@@ -29,11 +25,22 @@ def sha256_of(data: bytes) -> str:
 
 
 def load_log() -> list[dict]:
-    """Read translated_log.json (UTF-8). Returns [] if the file doesn't exist."""
-    if LOG_PATH.exists():
-        with open(LOG_PATH, encoding="utf-8") as f:
-            return json.load(f)
-    return []
+    """Read translated_log.json (UTF-8).
+
+    A missing manifest is a HARD ERROR, not an empty list: the file is committed
+    to the repo, so its absence means a broken path (e.g. after a file move) or a
+    wrong working tree — and silently returning [] would make the next run
+    re-translate the entire Drive tree. Bootstrap a brand-new deployment by
+    creating an empty JSON array by hand.
+    """
+    if not LOG_PATH.exists():
+        raise FileNotFoundError(
+            f"Manifest not found at {LOG_PATH} — refusing to treat this as an "
+            "empty manifest (that would re-translate everything). If this is a "
+            "fresh deployment, create the file containing [] explicitly."
+        )
+    with open(LOG_PATH, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def save_log(entries: list[dict]) -> None:

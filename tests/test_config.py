@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import config
+from core import config
 
 VALID = {
     "root_folder_id": "abc123",

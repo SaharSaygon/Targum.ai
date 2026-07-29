@@ -22,9 +22,7 @@ download — that would defeat the point for unchanged files. hash_dedup stays t
 post-download authority INSIDE the loop (read_file_logic); the pre-pass uses the
 md5 gates (md5_gate for translated, skip_unchanged for deliberate skips).
 """
-import dedup
-import drive
-import manifest
+from core import dedup, drive, manifest
 
 
 def walk_tree(root_folder_id, list_children):

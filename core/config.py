@@ -15,7 +15,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+from core.paths import CONFIG_PATH
 
 # Optional keys → their defaults. Required keys are deliberately absent here:
 # they must be present in config.json, with no silent fallback.

@@ -8,23 +8,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 from anthropic import Anthropic
 
-import config
-import costs
-import courses
-import dedup
-import drive
-import manifest
-import prepass
-import translation_engine as engine
-from pdf_mode_detector import detect_pdf_mode
+from core import config, costs, courses, dedup, drive, manifest, prepass
+from core.paths import ENV_PATH, LOGS_DIR, ROUTING_PROMPT_PATH
+from core.pdf_mode_detector import detect_pdf_mode
+from legacy import translation_engine as engine
 
-load_dotenv()
+load_dotenv(ENV_PATH)
 client = Anthropic()
 
 # Per-user config (root folder, vault path, model, budgets) lives in config.json,
-# loaded once at import. Secrets stay in .env. See config.py.
+# loaded once at import. Secrets stay in .env. See core/config.py.
 CONFIG = config.load_config()
-SYSTEM_PROMPT = Path("agent_routing_prompt.md").read_text(encoding="utf-8")
+SYSTEM_PROMPT = ROUTING_PROMPT_PATH.read_text(encoding="utf-8")
 
 
 # The 8 tool schemas. The `description` is how the model learns what each
@@ -548,7 +543,7 @@ def run_agent(root_folder_id=None):
     #     logs/ and *.log are gitignored — never committed. stdout prints stay
     #     (watch live); the file is the permanent record of every decision. ---
     run_start = datetime.now(timezone.utc)
-    logs_dir = Path("logs")
+    logs_dir = LOGS_DIR
     logs_dir.mkdir(exist_ok=True)
     run_id = run_start.strftime('%Y%m%d_%H%M%S')   # shared by the run log + the ledger
     log_path = logs_dir / f"agent_{run_id}.log"

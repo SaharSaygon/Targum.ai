@@ -46,7 +46,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 import sys
 sys.path.insert(0, str(PROJECT_ROOT))
-from manifest import load_log, save_log
+from core.manifest import load_log, save_log
 
 LOG_PATH = PROJECT_ROOT / "translated_log.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]

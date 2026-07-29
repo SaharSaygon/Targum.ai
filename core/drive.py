@@ -11,6 +11,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from core.paths import CREDENTIALS_PATH, TOKEN_PATH
+
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 FOLDER_MIME = "application/vnd.google-apps.folder"
 
@@ -32,8 +34,8 @@ _NUM_RETRIES = 5
 
 def get_credentials():
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if TOKEN_PATH.exists():
+        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
@@ -44,9 +46,9 @@ def get_credentials():
                 # flow instead of crashing mid-run.
                 creds = None
         if not creds or not creds.valid:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as f:
+        with open(TOKEN_PATH, "w") as f:
             f.write(creds.to_json())
     return creds
 

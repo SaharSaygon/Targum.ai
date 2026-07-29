@@ -44,8 +44,11 @@ overhead stripped away.
 
 ## Run
 
+From the repo root:
+
 ```bash
-.venv/bin/python agent.py
+.venv/bin/python -m sdk.agent_sdk      # subscription path (Claude Agent SDK, default)
+.venv/bin/python -m legacy.agent       # API pay-per-token path (fallback)
 ```
 
 Each run writes an audit log and a cost ledger to `logs/` and prints a
@@ -55,13 +58,13 @@ RUN SUMMARY (files translated, skips, refusals, total cost).
 
 | Path | What it is |
 |---|---|
-| `agent.py` | Agent loop, tool schemas, tool handlers, run summary |
+| `core/` | Shared modules used by both versions: `paths.py` (repo-root path anchors), `prepass.py`/`dedup.py` (incremental worklist, hashing), `manifest.py` (manifest I/O), `drive.py`, `config.py`, `courses.py`, `costs.py`, `pdf_mode_detector.py`, `vault.py` (save-to-vault executor + skill loading), `pdf_images.py` (rasterise/downscale pipeline) |
+| `legacy/` | The API pay-per-token version: `agent.py` (agent loop, tool schemas, handlers), `translation_engine.py` (Anthropic API translation calls) |
+| `sdk/` | The subscription version (Claude Agent SDK): `agent_sdk.py` orchestrates the worklist; per file a route session then a translate session |
 | `agent_routing_prompt.md` | System prompt: routing/classification rules (read at startup) |
-| `translation_engine.py`, `pdf_mode_detector.py` | Translation calls + text-vs-image signal detector |
-| `drive.py`, `prepass.py`, `dedup.py`, `manifest.py` | Drive access, incremental worklist, hashing, manifest I/O |
-| `courses.py` / `courses.json` | Hebrew→English course-name mappings |
-| `costs.py` | Token/cost accounting |
-| `skills/` | Per-tool prompt fragments loaded by the translation engine |
+| `courses.json` | Hebrew→English course-name mappings |
+| `skills/` | Per-tool prompt fragments loaded by the translation layer |
+| `tests/` | Unit tests (`python -m tests.test_config`) |
 | `scripts/` | One-off utilities (`init_translation_log.py` — interactive manifest bootstrap) |
 | `translated_log.json` | The manifest: every known Drive file with hash, vault path, or skip reason |
 | `logs/` | Run logs + cost ledgers (current; older runs in `logs/archive/`) — gitignored |

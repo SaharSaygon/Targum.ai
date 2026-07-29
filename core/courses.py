@@ -13,10 +13,8 @@ Atomic write, UTF-8, ensure_ascii=False — Hebrew keys stay readable on disk.
 
 import json
 import os
-from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).parent
-COURSES_PATH = _PROJECT_ROOT / "courses.json"
+from core.paths import COURSES_PATH
 
 
 def load_courses() -> dict:
