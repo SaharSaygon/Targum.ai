@@ -4,6 +4,7 @@
 # mid-run. Only what list_folder needs lives here for now; download/sha256
 # helpers come later.
 import os
+import threading
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
