@@ -297,6 +297,7 @@ def main(argv=None):
     tokens_cr = sum(r["cache_read_input_tokens"] for r in rows)
     tokens_cw = sum(r["cache_creation_i_tokens"] for r in rows)
     tokens_out = sum(r["output_tokens"] for r in rows)
+    api_equivalent = sum(r["cost_usd"] for r in rows)  # ledger rows price at API rates
     by_cat = Counter(r["category"] for r in rows)
 
     lines = [
@@ -312,7 +313,7 @@ def main(argv=None):
         + ("" if not summary["errors"] else " " + str(summary["errors"])),
         f"sessions by category    : {dict(by_cat)}",
         f"tokens in/cw/cr/out     : {tokens_in}/{tokens_cw}/{tokens_cr}/{tokens_out}",
-        "cost                    : subscription (advisory ledger only)",
+        f"API-equivalent cost     : ${api_equivalent:.2f} (paid: $0 — subscription)",
         f"wall-clock duration     : {wall:.1f}s",
         "============================================================",
     ]
