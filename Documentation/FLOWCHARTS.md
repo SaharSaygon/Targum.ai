@@ -1,10 +1,70 @@
 # FLOWCHARTS
 
-Mermaid control-flow diagrams traced directly from the live source
-(`agent.py`, `prepass.py`, `dedup.py`, `manifest.py`, `drive.py`,
-`translation_engine.py`, `pdf_mode_detector.py`). Node labels carry the exact
-function names so each diagram maps 1:1 to the code. Where the code differs from
-the brief, the code wins and a note records the difference.
+Mermaid control-flow diagrams traced directly from the live source. Node labels
+carry the exact function names so each diagram maps 1:1 to the code. Where the
+code differs from the brief, the code wins and a note records the difference.
+
+> **2026-07-29 reorg:** modules moved into packages — `core/` (prepass, dedup,
+> manifest, drive, config, courses, costs, pdf_mode_detector, vault,
+> pdf_images, paths), `legacy/` (agent, translation_engine), `sdk/` (agent_sdk,
+> sessions, prepare). Diagrams 1–11 below describe the LEGACY (API
+> pay-per-token) path and still hold, with module names now prefixed
+> `legacy.`/`core.`. Diagram 0 is the current default path.
+
+---
+
+## 0. SDK subscription path (Shape D) — the current default
+
+`python -m sdk.agent_sdk`. Python owns the loop (pre-pass, prepare, recording,
+retries, concurrency); the model owns the judgment (skip rules, לתרגם override,
+mode, course naming) in per-file sessions billed to the Claude subscription.
+Blue = deterministic code, purple = model session, green = state on disk.
+
+```mermaid
+flowchart TD
+    DRIVE[("Google Drive tree<br/>(Hebrew course PDFs)")]
+    PRE["prepass.build_worklist<br/>md5-diff vs manifest — no downloads"]
+    NAME["sessions.resolve_course_names (rare)<br/>runs only when a course folder is unmapped;<br/>names it once before the fan-out — same system<br/>prompt as routing, so same warm cache"]
+    FAN{{"agent_sdk._process_file<br/>per file — concurrency 3"}}
+    PREP["prepare.prepare_file<br/>download → hash dedup → signals"]
+    ROUTE["sessions.route_file — ROUTE session<br/>system = agent_routing_prompt.md only<br/>structured decision out"]
+    TRANS["sessions.translate_file — TRANSLATE session<br/>system = skills only, just-in-time<br/>writes the .md itself with the Write tool"]
+    SKIP["vault.record_skip<br/>(skipped_permanent)"]
+    REC["verify .md exists →<br/>vault.record_translation"]
+    VAULT[("Obsidian vault<br/>&lt;course&gt;/&lt;type&gt;/…_EN.md")]
+    MANI[("translated_log.json<br/>per-file checkpoint")]
+
+    DRIVE --> PRE
+    MANI -.->|"what's already done"| PRE
+    PRE -->|"all courses already mapped<br/>(the usual run)"| FAN
+    PRE -.->|"new course folder in worklist?"| NAME
+    NAME -.-> FAN
+    FAN --> PREP
+    PREP -->|"already done? (md5 gate / hash dedup)"| MANI
+    PREP --> ROUTE
+    ROUTE -->|"decision: skip"| SKIP
+    ROUTE -->|"decision: translate<br/>(mode, course, type)"| TRANS
+    TRANS -->|"Write"| VAULT
+    TRANS -.->|"REFUSED / bad extraction —<br/>model decides retry or skip"| ROUTE
+    TRANS -->|"SAVED"| REC
+    SKIP --> MANI
+    REC --> MANI
+```
+
+Notes:
+- **Two stable cache prefixes**: all route sessions share the routing-prompt
+  prefix; all translate sessions share the skills prefix (text and image mode
+  are separate entries — both coexist within the 5-min TTL). Confirmed live:
+  route sessions run at ~2 fresh input tokens with ~5.7K cache-read.
+- **Per-file isolation**: any failure costs one file; unrecorded files
+  reappear in the next pre-pass (manifest = the checkpoint). One retry per
+  file, then left for the next run.
+- **Refusal loop**: a REFUSED translate result (model contract or opus-5
+  classifier) goes back through a route session with the failure as context —
+  the model, not code, chooses image-retry vs skip (one re-route max).
+- **Billing guard**: `ANTHROPIC_API_KEY` is stripped from the environment in
+  subscription mode; the run summary prints the API-equivalent cost from the
+  ledger (`logs/ledger_sdk_<run>.jsonl`).
 
 ---
 
