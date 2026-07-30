@@ -138,6 +138,7 @@ async def _translate_and_record(ctx, decision, summary):
         mode_reasoning=decision["reasoning"],
         detection_signals=ctx.signals,
         source_md5=ctx.drive_md5,
+        source_modified_time=ctx.modified_time if ctx.drive_md5 is None else None,
     )
     LOG(f"  SAVED: {ctx.path} → {target.relative_to(vault_path)} ({mode})")
     summary["saved"].append((ctx.name, str(target.relative_to(vault_path))))
@@ -188,6 +189,8 @@ async def _process_file_once(item, path, summary):
                 source_hash=ctx.source_hash,
                 skip_reason=decision.get("skip_reason") or decision["reasoning"],
                 source_md5=ctx.drive_md5,
+                source_modified_time=(
+                    ctx.modified_time if ctx.drive_md5 is None else None),
             )
             LOG(f"  SKIPPED (permanent): {path} — {decision.get('skip_reason')}")
             summary["skipped"].append((ctx.name, decision.get("skip_reason")))
@@ -321,6 +324,12 @@ def main(argv=None):
         print(line)
         LOG(line)
     log_f.close()
+
+    # Degraded-run signal for the unattended wrapper / launchd logs: a run that
+    # ends with transient errors or unresolved events exits 1 (its files stay
+    # unrecorded and retry next run); a clean run exits 0.
+    if summary["errors"] or summary["events"]:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

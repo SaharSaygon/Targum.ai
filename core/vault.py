@@ -167,6 +167,7 @@ def record_translation(
     mode_reasoning: str,
     detection_signals: dict | None = None,
     source_md5: str | None = None,
+    source_modified_time: str | None = None,
 ) -> dict:
     """Upsert a translated-file manifest entry. The single owner of the entry
     schema — used by save_to_vault (legacy path, which also writes the .md) and
@@ -190,10 +191,14 @@ def record_translation(
         "chosen_mode":         chosen_mode,
         "mode_reasoning":      mode_reasoning,
     }
-    # source_md5 and detection signals are written only when present — no null
-    # keys, so an entry's lack of either is honest absence.
+    # source_md5, source_modified_time, and detection signals are written only
+    # when present — no null keys, so an entry's lack of either is honest
+    # absence. modified_time matters for native Google files (no md5): it is
+    # what dedup.modified_unchanged gates on in the pre-pass.
     if source_md5 is not None:
         entry["source_md5"] = source_md5
+    if source_modified_time is not None:
+        entry["source_modified_time"] = source_modified_time
     if detection_signals is not None:
         entry.update(detection_signals)
 
@@ -209,6 +214,7 @@ def record_skip(
     source_hash: str,
     skip_reason: str,
     source_md5: str | None = None,
+    source_modified_time: str | None = None,
 ) -> dict:
     """Upsert a skipped_permanent manifest entry (deliberate, rule-based skip).
 
@@ -232,6 +238,8 @@ def record_skip(
     }
     if source_md5 is not None:
         entry["source_md5"] = source_md5
+    if source_modified_time is not None:
+        entry["source_modified_time"] = source_modified_time
     entries = manifest.load_log()
     entries = manifest.upsert_entry(entries, entry)
     manifest.save_log(entries)

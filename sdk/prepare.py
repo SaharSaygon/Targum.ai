@@ -36,10 +36,22 @@ class FileContext:
     drive_md5: str | None       # None for native Google Docs
     signals: dict               # scalar signals (the route session's evidence)
     signals_full: dict = field(repr=False, default_factory=dict)  # per_page + unrecognized_sample
+    modified_time: str | None = None  # Drive modifiedTime — freshness signal when md5 is None
 
     @property
     def path(self) -> str:
         return "/".join(self.parent_path + [self.name])
+
+
+def _refresh_modified_time(entries, file_id, modified_time):
+    """Update an existing entry's source_modified_time in place (atomic save).
+    No-op when there is no entry for this id (cross-ID dedup hit) or nothing
+    changed."""
+    entry = manifest.find_by_id(entries, file_id)
+    if (entry is not None and modified_time
+            and entry.get("source_modified_time") != modified_time):
+        entry["source_modified_time"] = modified_time
+        manifest.save_log(entries)
 
 
 def prepare_file(item: dict) -> dict:
@@ -57,10 +69,14 @@ def prepare_file(item: dict) -> dict:
     # 0. md5 freshness gate — cheap metadata call, no byte download. (The
     #    pre-pass already md5-diffed, but the gate stays as defense in depth and
     #    covers native Google Docs edge cases exactly as the legacy path did.)
+    #    modifiedTime rides along in the same call: it is the freshness signal
+    #    recorded for native Google files, which have no md5.
     try:
-        drive_md5 = drive.file_md5(file_id)
+        meta = drive.file_meta(file_id)
     except Exception as e:
         return {"status": "error", "reason": f"metadata fetch failed: {e}"}
+    drive_md5 = meta.get("md5Checksum")
+    modified_time = meta.get("modifiedTime")
     entries = manifest.load_log()
     verdict = dedup.md5_gate(entries, file_id, drive_md5)
     if verdict is not None:
@@ -78,6 +94,11 @@ def prepare_file(item: dict) -> dict:
     # 3. dedup against the manifest (by id gated on hash, cross-ID fallback).
     verdict = dedup.hash_dedup(entries, file_id, source_hash)
     if verdict.get("status") == "already_done":
+        if drive_md5 is None:
+            # Native Google file dismissed by content hash: refresh the stored
+            # modifiedTime so the NEXT pre-pass drops it without a download —
+            # without this, a Doc reappears on every run forever (no md5 gate).
+            _refresh_modified_time(entries, file_id, modified_time)
         return verdict
 
     # 4. extraction signals — the route session's text-vs-image evidence.
@@ -93,6 +114,7 @@ def prepare_file(item: dict) -> dict:
         pdf_bytes=pdf_bytes,
         source_hash=source_hash,
         drive_md5=drive_md5,
+        modified_time=modified_time,
         signals={k: raw_signals[k] for k in _SCALAR_SIGNAL_KEYS},
         signals_full={
             "per_page":            raw_signals["per_page"],

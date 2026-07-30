@@ -132,16 +132,28 @@ def file_md5(file_id):
     return meta.get("md5Checksum")  # None → native Google file → gate N/A
 
 
+def file_meta(file_id):
+    """md5Checksum + modifiedTime in ONE metadata call, no byte download.
+    md5 is the freshness signal for binary files; modifiedTime is the fallback
+    for native Google files, which have no md5 (see dedup.modified_unchanged).
+    Returns {"md5Checksum": ...|absent, "modifiedTime": ...}."""
+    return get_service().files().get(
+        fileId=file_id, fields="md5Checksum, modifiedTime"
+    ).execute(num_retries=_NUM_RETRIES)
+
+
 def list_folder_children(folder_id, include_md5=False):
     """Direct children of a Drive folder — NOT recursive. The agent walks the
     tree itself via repeated calls. Paginates so 100+ file folders don't truncate.
     Returns [{name, id, type, mime_type}] where type is "folder" or "file".
 
-    include_md5=True additionally requests md5Checksum and adds it to each child
-    dict (None for folders / native Google files). Used by the deterministic
+    include_md5=True additionally requests md5Checksum + modifiedTime and adds
+    them to each child dict (md5 is None for folders / native Google files;
+    modifiedTime is their freshness fallback). Used by the deterministic
     pre-pass (prepass.py) to diff bytes vs the manifest WITHOUT downloading. The
     agent's list_folder tool leaves it False, so its tool result is unchanged."""
-    fields_files = "id, name, mimeType" + (", md5Checksum" if include_md5 else "")
+    fields_files = "id, name, mimeType" + (
+        ", md5Checksum, modifiedTime" if include_md5 else "")
     query = f"'{folder_id}' in parents and trashed = false"
     children = []
     page_token = None
@@ -162,6 +174,7 @@ def list_folder_children(folder_id, include_md5=False):
             }
             if include_md5:
                 child["md5Checksum"] = f.get("md5Checksum")  # None for folders/native
+                child["modifiedTime"] = f.get("modifiedTime")
             children.append(child)
         page_token = resp.get("nextPageToken")
         if not page_token:

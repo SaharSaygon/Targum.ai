@@ -53,6 +53,25 @@ def skip_unchanged(entries, drive_file_id, drive_md5):
     )
 
 
+def modified_unchanged(entries, drive_file_id, modified_time):
+    """Pre-pass gate for files WITHOUT an md5 (native Google Docs/Sheets/Slides).
+
+    True when this file's manifest entry — translated (md_path) or deliberately
+    skipped — stored a source_modified_time equal to Drive's current
+    modifiedTime, i.e. the Doc provably hasn't been touched since it was last
+    handled. Binary files never use this gate: their md5 is content-derived and
+    sync-immune, while modifiedTime churns on synced folders (see
+    drive.file_md5). For native files modifiedTime is the only cheap freshness
+    signal Drive offers; a spurious churn just falls through to hash dedup,
+    which refreshes the stored value (prepare_file)."""
+    entry = find_by_id(entries, drive_file_id)
+    return bool(
+        modified_time is not None and entry is not None
+        and (entry.get("md_path") or entry.get("model") == "skipped_permanent")
+        and entry.get("source_modified_time") == modified_time
+    )
+
+
 def hash_dedup(entries, drive_file_id, source_hash):
     """POST-DOWNLOAD content dedup. Returns an already_done verdict or PROCEED.
 

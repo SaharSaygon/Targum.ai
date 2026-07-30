@@ -48,6 +48,8 @@ def walk_tree(root_folder_id, list_children):
                     "name": c["name"],
                     "parent_path": path,
                     "md5": c.get("md5Checksum"),
+                    # freshness fallback for native Google files (md5 None)
+                    "modified_time": c.get("modifiedTime"),
                 })
 
     rec(root_folder_id, [])
@@ -71,6 +73,9 @@ def diff_tree(files, entries):
             continue   # already translated, bytes unchanged
         if dedup.skip_unchanged(entries, fid, md5):
             continue   # deliberately skipped, bytes unchanged
+        if md5 is None and dedup.modified_unchanged(
+                entries, fid, f.get("modified_time")):
+            continue   # native Google file, untouched since last handled
         worklist.append({
             "file_id": fid,
             "name": f["name"],
