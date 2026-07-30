@@ -5,6 +5,27 @@ state only — reversed decisions and the path here live in `HISTORY.md`, not he
 Where the live code disagrees with what a reader would expect from comments or the
 other docs, this file flags it inline rather than smoothing it over.
 
+> **Scope note (2026-07-30).** Written 2026-06-07, before the repo reorg and the
+> subscription port. The mechanics below (pre-pass, tools, dedup, cache, manifest
+> schema) are still accurate, but they describe what is now the **legacy API
+> path** — since 2026-07-29 the DEFAULT entry point is `python -m sdk.agent_sdk`
+> (Shape D: Python orchestrates per-file ROUTE/TRANSLATE sessions on the Claude
+> subscription; see `FLOWCHARTS.md` diagram 0 and STATUS). Read the module names
+> below through this old→new mapping:
+>
+> | Below | Today |
+> |---|---|
+> | `agent.py` | `legacy/agent.py` (API fallback; spend cap enforced 2026-07-30) |
+> | `prepass.py`, `dedup.py`, `costs.py`, `manifest.py`, `drive.py`, `pdf_mode_detector.py`, `courses.py` | same names under `core/` (+ new `core/paths.py`, `core/vault.py`, `core/pdf_images.py`, `core/config.py`) |
+> | `translation_engine.py` | `legacy/translation_engine.py` |
+> | `init_translation_log.py` | `scripts/init_translation_log.py` |
+> | — (not yet built) | `sdk/` (default path), `scripts/run_agent.sh` + launchd (unattended runs, see `unattended_runs.md`) |
+>
+> Model/config facts that changed since: model is `claude-opus-5` via
+> `config.json` (`core/config.py`), the manifest is ~486 entries, and native
+> Google Docs are freshness-gated by `modifiedTime` (`dedup.modified_unchanged`)
+> in addition to the md5 gates described below.
+
 ---
 
 ## 1. System overview

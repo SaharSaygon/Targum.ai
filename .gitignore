@@ -23,6 +23,6 @@ __pycache__/
 logs/
 
 # Personal build logs / planning — kept locally, not for the public repo
-Documentation/day_1_checklist.md
-Documentation/day_2_checklist.md
-Documentation/hebrew_translator_project_plan.md
+Documentation/archive/day_1_checklist.md
+Documentation/archive/day_2_checklist.md
+Documentation/archive/hebrew_translator_project_plan.md

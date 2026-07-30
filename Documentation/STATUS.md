@@ -5,7 +5,7 @@
 > identifier with the dot). No code/module names changed by the rename. See HISTORY
 > "Project rename: → Targum.ai / Targum_ai (2026-06-14)".
 
-*Last updated: 2026-07-29.*
+*Last updated: 2026-07-30.*
 
 ## Current state
 
@@ -25,7 +25,10 @@ every skip for free).
 **Config externalized (2026-06-15, `2b416a7`).** Per-user settings (`root_folder_id`,
 `vault_path`, `model`, `spend_cap_usd`, `tool_call_budget`) live in a gitignored
 `config.json` read through `config.py` (frozen dataclass, validated, 11 tests). Secrets
-stay in `.env`. Note: `spend_cap_usd` is carried but **not yet enforced**.
+stay in `.env`. Note: `spend_cap_usd` is **enforced on the api path since
+2026-07-30** (the loop stops cleanly at the cap; subscription path ignores it —
+no per-token dollars). `run_interval_days` (added 2026-07-30) sets the
+unattended cadence.
 
 **Drive/engine fixes (2026-07-16, `fbf419c`).** Google-native Docs/Sheets/Slides export
 via `export_media`; revoked-refresh-token (`invalid_grant`) fallback to interactive OAuth;
@@ -66,8 +69,8 @@ the outliers. 0 errors across all runs; the one refusal was handled correctly.
 
 ## Subscription port LANDED (2026-07-29)
 
-The plan of `Documentation/subscription_and_cron_plan.md` (as revised 2026-07-29)
-is implemented and live:
+The plan of `Documentation/archive/subscription_and_cron_plan.md` (as revised
+2026-07-29) is implemented and live:
 
 - **Repo reorg**: `core/` (shared modules incl. new `paths.py`, `vault.py`,
   `pdf_images.py`) + `legacy/` (API pay-per-token path) + `sdk/` (subscription
@@ -94,15 +97,17 @@ concurrent fan-out → per-thread services in `core/drive.py`.
 
 ## Next step
 
-**Task 2 — launchd automation** (agreed 2026-07-29, sequenced in
-subscription_and_cron_plan.md): prerequisites first (`skipped_transient` +
-error states, run-summary notification, `spend_cap_usd` enforcement for the
-api fallback), then wrapper script + plist. Before scheduling: one
-influx-scale supervised SDK run.
+**Task 2 — launchd automation: LIVE since 2026-07-30** (see
+`unattended_runs.md`, HISTORY same date). `ai.targum.agent` is bootstrapped:
+daily 18:00 trigger, wrapper due-check at `run_interval_days: 3`, macOS
+notifications, commit-only. Keychain token stored; wrapper verified same day
+(real due run OK + two silent no-ops). **Supervised rollout in progress**:
+watch the first 2–3 scheduled firings (next due 2026-08-02 18:00 —
+notification + `logs/launchd.log` + auto-commit), then this line can drop to
+routine operation.
 
 ## Deferred (not blocking)
 - Disk-persisted cache as the HARD save-after-translate guarantee (the soft
   save-immediately rule is the current mitigation — see PHASE2_NOTES #3b).
 - Standing manifest-integrity `--audit` mode (the md5 backfill was a one-off
   manual run of this logic — PHASE2_NOTES #6).
-- `spend_cap_usd` enforcement (config carries it since 2026-06-15; unenforced).

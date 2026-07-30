@@ -1237,3 +1237,43 @@ Drive service objects (`core/drive.py`), credentials still created once.
 Manifest after: **487 entries** — 378 `claude-opus-4-8`,
 **1 `subscription:claude-opus-5`** (the first), 35 `manual`,
 15 `claude-opus-4-7`, 58 `skipped_permanent`.
+
+## Task 2 — unattended launchd automation LIVE (2026-07-30)
+
+Built and enabled per `task2_launchd_prompt.md` (see `unattended_runs.md`).
+Owner decisions: macOS notifications (email/Resend dropped — no external
+service, no extra secret), daily 18:00 trigger, `run_interval_days: 3`,
+commit-only (no auto-push), Keychain item `targum-claude-oauth`.
+
+Landed: `run_interval_days` config key; `spend_cap_usd` enforced on the api
+path (`spend_cap_reached` gate before each routing call, 5 unit tests);
+`sdk.agent_sdk` exits 1 on a degraded run (transient errors / unresolved
+events); `scripts/run_agent.sh` (due-check → Keychain auth → run → stamp →
+notification with summary counts → state commit); `scripts/ai.targum.agent.plist`
+installed to `~/Library/LaunchAgents/` and bootstrapped.
+
+Rollout verified same day: token stored (first attempt truncated by a
+two-line paste — deleted and re-added), wrapper fired a real due run
+(`20260730_140218`: 3 already_done, 0 errors, 25.8s, OK notification), two
+same-day re-invocations were silent no-ops. First scheduled firing expected
+2026-08-02 18:00; supervised for the first 2–3 firings.
+
+## Recurring-worklist fix: swapped tutorials + native-Doc gate (2026-07-30)
+
+Three files reappeared on every run's worklist (already_done each time, no
+LLM cost, ~25s Drive I/O): the two מערכות לינאריות tutorials 12/13 — whose
+CONTENTS had been swapped on Drive after translation to fix a numbering
+mixup — and the List_of_Formulas native Google Doc, which has no md5Checksum
+so the md5 pre-pass gate could never verify it unchanged.
+
+Fixes: (1) vault `_EN.md` files renamed to match content (frontmatter
+source_file corrected), manifest entries' content fields swapped — verified
+via md5_gate. (2) New `dedup.modified_unchanged` gate: pre-pass drops
+md5-less native Google files whose stored `source_modified_time` matches
+Drive's current modifiedTime; recorded at translate/skip time
+(`vault.record_*`), refreshed on hash-dedup dismissal (`sdk/prepare.py`),
+listed via `modifiedTime` in `drive.list_folder_children(include_md5=True)` /
+`drive.file_meta`. Backfilled for List_of_Formulas; removed a stray
+malformed-id duplicate manifest entry (487 → 486). 8 new unit tests
+(`tests/test_native_doc_gate.py`); live pre-pass after fix: **0/466 files
+need work**.
