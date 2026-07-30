@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ai.targum.agent — daily 18:00 trigger for the Targum unattended run.
+  The wrapper (scripts/run_agent.sh) decides whether a run is actually due
+  (run_interval_days in config.json); this plist never encodes cadence.
+
+  Install (a COPY, not a symlink):
+    cp scripts/ai.targum.agent.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.targum.agent.plist
+  Remove:
+    launchctl bootout gui/$(id -u)/ai.targum.agent
+  Fire once now (test):
+    launchctl kickstart gui/$(id -u)/ai.targum.agent
+
+  launchd (unlike cron) runs a missed 18:00 firing once when the Mac wakes
+  from sleep — the reason it was chosen for a laptop.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.targum.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>/Users/saharsaygon/Projects/Targum_ai/scripts/run_agent.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>18</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/saharsaygon/Projects/Targum_ai</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/saharsaygon/Projects/Targum_ai/logs/launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/saharsaygon/Projects/Targum_ai/logs/launchd.log</string>
+</dict>
+</plist>

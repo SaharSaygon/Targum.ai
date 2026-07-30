@@ -19,6 +19,7 @@ VALID = {
     "tool_call_budget": 200,
     "auth_mode": "api",
     "concurrency": 2,
+    "run_interval_days": 3,
 }
 
 
@@ -75,6 +76,15 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(cfg.tool_call_budget, 200)
         self.assertEqual(cfg.auth_mode, "subscription")
         self.assertEqual(cfg.concurrency, 3)
+        self.assertEqual(cfg.run_interval_days, 7)
+
+    def test_run_interval_days_must_be_positive(self):
+        for bad in (0, -1):
+            data = {**VALID, "run_interval_days": bad}
+            with tempfile.TemporaryDirectory() as d:
+                with self.assertRaises(config.ConfigError) as ctx:
+                    config.load_config(_write(d, data))
+            self.assertIn("run_interval_days", str(ctx.exception))
 
     def test_wrong_type_names_offending_key(self):
         data = {**VALID, "tool_call_budget": "lots"}

@@ -29,6 +29,11 @@ _DEFAULTS = {
     "auth_mode": "subscription",
     # Concurrent per-file session pipelines in the SDK path (3–4 recommended).
     "concurrency": 3,
+    # Minimum days between unattended runs. The launchd job fires daily; the
+    # wrapper (scripts/run_agent.sh) compares this against logs/last_run and
+    # exits quietly when a run isn't due yet — cadence changes are a config
+    # edit, never a launchctl reload.
+    "run_interval_days": 7,
 }
 
 # Required keys must be present and correctly typed (and non-empty for strings).
@@ -45,6 +50,7 @@ _OPTIONAL = {
     "tool_call_budget": int,
     "auth_mode": str,
     "concurrency": int,
+    "run_interval_days": int,
 }
 
 
@@ -61,6 +67,7 @@ class Config:
     tool_call_budget: int
     auth_mode: str
     concurrency: int
+    run_interval_days: int
 
 
 def _type_names(typ) -> str:
@@ -139,6 +146,11 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         raise ConfigError(
             f"Key 'concurrency' in {path} must be a positive integer, "
             f"got {values['concurrency']!r}."
+        )
+    if values["run_interval_days"] < 1:
+        raise ConfigError(
+            f"Key 'run_interval_days' in {path} must be a positive integer, "
+            f"got {values['run_interval_days']!r}."
         )
 
     return Config(**values)

@@ -159,6 +159,13 @@ CURRENT_TURN = 0
 LEDGER_ROWS = []
 
 
+def spend_cap_reached(ledger_rows, cap_usd):
+    """True when the run's accumulated spend (routing + translation ledger rows)
+    has reached cap_usd. API path only — the subscription path has no per-token
+    dollars, so its wrapper never consults this."""
+    return sum(r["cost_usd"] for r in ledger_rows) >= cap_usd
+
+
 def read_file_logic(file_id):
     """Download → hash → dedup → detect. Returns a result dict (the handler
     json.dumps it). Never raises into the loop: download/parse/detector failures
@@ -613,6 +620,7 @@ def run_agent(root_folder_id=None):
 
     turn = 0
     budget_hit = False
+    cap_hit = False
     if not worklist:
         print("Nothing new — pre-pass found no new/changed files; agent loop skipped.")
         log("PRE-PASS verdict: nothing new — agent loop skipped.")
@@ -620,6 +628,17 @@ def run_agent(root_folder_id=None):
         # Empty worklist → the loop body never runs (no create() call, no spend);
         # control still falls through to the finally summary below.
         while worklist:
+            # spend-cap gate BEFORE the next routing call: once accumulated
+            # cost (routing + translation) reaches CONFIG.spend_cap_usd, stop
+            # cleanly. Unfinished files stay unrecorded → next run's pre-pass
+            # re-offers them.
+            if spend_cap_reached(LEDGER_ROWS, CONFIG.spend_cap_usd):
+                warn = (f"SPEND CAP REACHED (${CONFIG.spend_cap_usd:.2f}) — "
+                        "stopping run; unfinished files retry next run")
+                print(warn)
+                log(warn)
+                cap_hit = True
+                break
             turn += 1
             CURRENT_TURN = turn      # module global read by the translation recorder
             print(f"\n========== TURN {turn} (tool calls: {tool_calls}/{TOOL_CALL_BUDGET}) ==========")
@@ -768,6 +787,8 @@ def run_agent(root_folder_id=None):
             summary.append(f"   - {fn}: {reason}")
         summary.append(f"total tool calls         : {tool_calls}/{TOOL_CALL_BUDGET}"
                        + ("  (BUDGET HIT)" if budget_hit else ""))
+        summary.append(f"spend cap                : ${CONFIG.spend_cap_usd:.2f}"
+                       + ("  (CAP HIT — run stopped early)" if cap_hit else ""))
         summary.append(f"total translation cost   : ${total_cost:.6f}")
 
         # --- cost-ledger roll-up: in-memory (NOT re-read from disk) so it still
