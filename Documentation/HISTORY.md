@@ -1277,3 +1277,33 @@ listed via `modifiedTime` in `drive.list_folder_children(include_md5=True)` /
 malformed-id duplicate manifest entry (487 → 486). 8 new unit tests
 (`tests/test_native_doc_gate.py`); live pre-pass after fix: **0/466 files
 need work**.
+
+## Wrapper fix: network wait + summary-gated stamping (2026-08-09)
+
+The first two scheduled firings both crashed the same way: launchd's 18:00
+trigger fired on wake, before Wi-Fi re-associated, and the run died on DNS
+(`oauth2.googleapis.com` failed to resolve) during the Drive token refresh —
+2026-08-02 and 2026-08-06. Two compounding wrapper bugs made it worse:
+`last_run` was stamped even for a startup crash (silently consuming the
+3-day interval), and the run-log lookup used `ls -t`, which picked up a
+*previous* run's log and mislabeled the crash DEGRADED in the notification.
+
+Fixes in `scripts/run_agent.sh` (see `unattended_runs.md` for the updated
+7-step sequence):
+
+1. **Network wait** — after auth, poll DNS (`socket.getaddrinfo` on
+   `oauth2.googleapis.com`, the same lookup the run's first HTTPS request
+   performs) every 10s for up to 180s; still down → NO NETWORK alert + abort
+   *without* stamping, so the run stays due and retries (and re-alerts) daily.
+2. **Marker-based log detection** — a `.run_marker` file touched just before
+   launch + `find -newer` selects only THIS run's log; a startup crash can no
+   longer borrow an old log.
+3. **Summary-gated stamping** — `last_run` is written only when the agent
+   exited 0 or its log contains `RUN SUMMARY` (emitted by both entry points
+   on completing the work loop). Exit 1 *with* a summary = DEGRADED (those
+   files retry on the next due run, as before); exit 1 *without* one =
+   CRASHED, unstamped — the whole run retries tomorrow instead of silently
+   losing the interval.
+
+First live test: the 2026-08-09 18:00 firing (due — the 08-06 crash was
+stamped by the old code). Supervised rollout continues from there.

@@ -5,7 +5,7 @@
 > identifier with the dot). No code/module names changed by the rename. See HISTORY
 > "Project rename: → Targum.ai / Targum_ai (2026-06-14)".
 
-*Last updated: 2026-07-30.*
+*Last updated: 2026-08-09.*
 
 ## Current state
 
@@ -101,10 +101,18 @@ concurrent fan-out → per-thread services in `core/drive.py`.
 `unattended_runs.md`, HISTORY same date). `ai.targum.agent` is bootstrapped:
 daily 18:00 trigger, wrapper due-check at `run_interval_days: 3`, macOS
 notifications, commit-only. Keychain token stored; wrapper verified same day
-(real due run OK + two silent no-ops). **Supervised rollout in progress**:
-watch the first 2–3 scheduled firings (next due 2026-08-02 18:00 —
-notification + `logs/launchd.log` + auto-commit), then this line can drop to
-routine operation.
+(real due run OK + two silent no-ops).
+
+**Supervised rollout in progress — first two scheduled firings crashed on
+DNS** (2026-08-02 and 2026-08-06: wake-triggered firing beat Wi-Fi
+re-association; the old wrapper stamped the crash anyway and mislabeled it
+DEGRADED). Fixed 2026-08-09 (see HISTORY "Wrapper fix: network wait +
+summary-gated stamping"): the wrapper now waits up to 3 min for DNS and
+stamps `last_run` only when the agent reached its RUN SUMMARY — a startup
+crash stays due and retries the next day. **Next due firing 2026-08-09
+18:00** — the first live test of the fix; watch the notification +
+`logs/launchd.log` + auto-commit, then this section can drop to routine
+operation.
 
 ## Deferred (not blocking)
 - Disk-persisted cache as the HARD save-after-translate guarantee (the soft

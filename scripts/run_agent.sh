@@ -7,9 +7,11 @@
 # cadence changes are a config edit, never a launchctl reload. Idempotent: a
 # second invocation the same day is a silent no-op.
 #
-# Sequence: due-check → cd repo root → OAuth token from Keychain → run agent
-# → stamp → log → notify (macOS notification; full summary stays in the logs)
-# → commit state (commit only, no push).
+# Sequence: due-check → cd repo root → OAuth token from Keychain → wait for
+# network (wake-triggered firings can beat Wi-Fi re-association) → run agent
+# → stamp (only if the agent reached its RUN SUMMARY — a startup crash stays
+# due and retries tomorrow) → log → notify (macOS notification; full summary
+# stays in the logs) → commit state (commit only, no push).
 #
 # One-time setup (see Documentation/unattended_runs.md):
 #   security add-generic-password -a "$USER" -s targum-claude-oauth -w '<token from `claude setup-token`>'
@@ -88,27 +90,62 @@ else
     LOG_GLOB="agent_[0-9]*.log"
 fi
 
-# ── 4. run ───────────────────────────────────────────────────────────────────
+# ── 4. network: a wake-triggered firing can start before Wi-Fi re-associates.
+#      Wait for DNS (the same lookup the run's first HTTPS request performs)
+#      instead of crashing on it ────────────────────────────────────────────
+WAITED=0
+until "$PY" -c 'import socket; socket.getaddrinfo("oauth2.googleapis.com", 443)' >/dev/null 2>&1; do
+    if [ "$WAITED" -ge 180 ]; then
+        # no stamp written → stays due, retries (and re-alerts) daily
+        llog "NO NETWORK after ${WAITED}s — run aborted"
+        notify "Targum run: NO NETWORK" \
+            "DNS still failing after ${WAITED}s. The run aborted without consuming the interval; it retries tomorrow."
+        exit 1
+    fi
+    sleep 10
+    WAITED=$((WAITED + 10))
+done
+[ "$WAITED" -gt 0 ] && llog "network up after ${WAITED}s wait"
+
+# ── 5. run ───────────────────────────────────────────────────────────────────
 llog "due → starting $MODULE (auth_mode=$AUTH_MODE, interval=${INTERVAL_DAYS}d)"
+MARKER="$LOGS_DIR/.run_marker"
+: > "$MARKER"
 "$PY" -m "$MODULE" >> "$LAUNCHD_LOG" 2>&1
 EXIT=$?
 
-# stamp: the run started (even a degraded/crashed one — unfinished files stay
-# unrecorded and retry on the NEXT due run; the notification carries failures)
-echo "$NOW" > "$STAMP"
-
-# ── 5. summary + notification ────────────────────────────────────────────────
-RUN_LOG="$(ls -t "$LOGS_DIR"/$LOG_GLOB 2>/dev/null | head -1)"
+# ── 6. status + stamp + notification ─────────────────────────────────────────
+# THIS run's log only (newer than the marker) — falling back to ls -t could
+# pick up a previous run's log and mislabel a startup crash as DEGRADED.
+RUN_LOG="$(find "$LOGS_DIR" -maxdepth 1 -name "$LOG_GLOB" -newer "$MARKER" 2>/dev/null | head -1)"
+rm -f "$MARKER"
 RUN_ID="$(basename "${RUN_LOG:-unknown}" .log | sed 's/^agent_sdk_//; s/^agent_//')"
+
+# "RUN SUMMARY" in the log = the agent completed its work loop; without it,
+# exit 1 is an unhandled crash, not a degraded-but-finished run
+if [ -n "${RUN_LOG:-}" ] && grep -q "RUN SUMMARY" "$RUN_LOG" 2>/dev/null; then
+    HAVE_SUMMARY=1
+else
+    HAVE_SUMMARY=0
+fi
 
 case "$EXIT" in
     0) STATUS="OK" ;;
-    1) STATUS="DEGRADED" ;;
+    1) if [ "$HAVE_SUMMARY" -eq 1 ]; then STATUS="DEGRADED"; else STATUS="CRASHED (exit 1)"; fi ;;
     *) STATUS="CRASHED (exit $EXIT)" ;;
 esac
+
+# stamp only a run that did its work (possibly degraded — those files retry on
+# the next due run); a startup crash leaves the interval unconsumed so the
+# whole run retries tomorrow instead of silently losing ${INTERVAL_DAYS} days
+if [ "$EXIT" -eq 0 ] || [ "$HAVE_SUMMARY" -eq 1 ]; then
+    echo "$NOW" > "$STAMP"
+else
+    llog "run $RUN_ID crashed before RUN SUMMARY — last_run NOT stamped, retries tomorrow"
+fi
 llog "run $RUN_ID finished: $STATUS"
 
-if [ -n "${RUN_LOG:-}" ] && grep -q "RUN SUMMARY" "$RUN_LOG" 2>/dev/null; then
+if [ "$HAVE_SUMMARY" -eq 1 ]; then
     # count lines only (they use ' : '; per-file sub-items start with '   - ')
     # — a macOS notification truncates anyway; the full block is in $RUN_LOG.
     SUMMARY="$(awk '/RUN SUMMARY/{found=1} found && / : /' "$RUN_LOG" \
@@ -118,7 +155,7 @@ else
 fi
 notify "Targum run $RUN_ID: $STATUS" "$SUMMARY"
 
-# ── 6. commit state (commit only — owner pushes manually) ────────────────────
+# ── 7. commit state (commit only — owner pushes manually) ────────────────────
 if [ -n "$(git status --porcelain -- translated_log.json courses.json)" ]; then
     if git commit -m "state: unattended run $RUN_ID" -- translated_log.json courses.json \
             >> "$LAUNCHD_LOG" 2>&1; then

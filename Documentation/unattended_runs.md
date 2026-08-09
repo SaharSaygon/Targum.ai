@@ -18,18 +18,25 @@ Mac was asleep at 18:00). The wrapper then:
    (launchd sessions don't inherit your shell's Claude login). Missing token →
    email alert + abort *without* stamping, so it retries (and re-alerts) daily
    until fixed.
-3. **Run** — `.venv/bin/python -m sdk.agent_sdk` (or `-m legacy.agent` when
+3. **Network wait** — a wake-triggered firing can start before Wi-Fi
+   re-associates (this crashed the 2026-08-02 and 2026-08-06 runs on DNS).
+   The wrapper polls DNS for up to 3 minutes; still down → alert + abort
+   *without* stamping, so it retries daily.
+4. **Run** — `.venv/bin/python -m sdk.agent_sdk` (or `-m legacy.agent` when
    `auth_mode: "api"`), output appended to `logs/launchd.log`.
-4. **Stamp** — writes `logs/last_run` once the agent actually started, even if
-   it then failed: transiently-failed files stay unrecorded in the manifest and
-   are retried on the *next due run*; the notification carries the failure.
-5. **Notify** — fires a macOS notification titled
+5. **Stamp** — writes `logs/last_run` only when the agent completed its work
+   loop (its log contains `RUN SUMMARY`) or exited 0: transiently-failed files
+   stay unrecorded in the manifest and are retried on the *next due run*. A
+   run that crashed *before* the summary does **not** stamp — it stays due and
+   the whole run retries tomorrow instead of silently losing the interval.
+6. **Notify** — fires a macOS notification titled
    `Targum run <run_id>: OK | DEGRADED | CRASHED` with the RUN SUMMARY counts
    (translated / skips / already_done / transient errors / cost / wall-clock).
-   Exit code 1 from the agent = DEGRADED (transient errors / unresolved
-   events). macOS truncates the body — the full summary is always in
+   Exit 1 *with* a RUN SUMMARY = DEGRADED (transient errors / unresolved
+   events); exit 1 *without* one = CRASHED (unhandled exception). macOS
+   truncates the body — the full summary is always in
    `logs/agent_sdk_<run>.log` and `logs/launchd.log`.
-6. **Commit** — commits `translated_log.json` (+ `courses.json` when changed)
+7. **Commit** — commits `translated_log.json` (+ `courses.json` when changed)
    as `state: unattended run <run_id>`. **Commit only** — push manually.
 
 ## One-time setup
@@ -75,8 +82,9 @@ auto-commit) before trusting it.
 - `spend_cap_usd` applies to the **api** path only (`legacy/agent.py` stops
   cleanly at the cap); the subscription path ignores it.
 - The agent exits **1** on a degraded run (transient errors / unresolved
-  events), **0** when clean — visible in `launchd.log` and the notification
-  title.
+  events), **0** when clean — but Python also exits 1 on any unhandled
+  exception, so the wrapper tells the two apart by whether the run log
+  contains `RUN SUMMARY` (present → DEGRADED, absent → CRASHED).
 - Notifications require them to be allowed for "Script Editor"/"osascript" in
   System Settings → Notifications (macOS asks on first use).
 - `logs/` (including `last_run`) is gitignored; the plist in `scripts/` is the
