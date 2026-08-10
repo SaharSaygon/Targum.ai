@@ -10121,47 +10121,47 @@
   {
     "drive_file_id": "1-rkjkS0h2qFDW6jaP-Uf1wHGkbkWGBBL",
     "drive_file_name": "Copy of Note 11 Aug 2025 (3).pdf",
-    "source_content_hash": "sha256:75a5490977f0ae6c66a276c8df22be1b0a620aa72469f381a1b79306d21a223c",
+    "source_content_hash": "sha256:28628f4a1a4284cf228ed7da655954879226b43660832183dbaaa5c26454e12b",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "User's own exam solution: file sits under exam folder מבחנים with explicit ownership marker \"פתרונות שלי\" (my solutions) and no לתרגם override; handwritten signals confirm (tokens_per_page 32.1, bytes_per_token 22161, recognizability 0.35).",
+    "skip_reason": "User's own exam solution: file sits under exam ancestor מבחנים with explicit ownership marker פתרונות שלי (\"my solutions\"), and no לתרגם override in path; handwriting signals (tokens_per_page 33.75, bytes_per_token 21128, recognizability 0.34) independently confirm it is the user's own handwritten work.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "6162ca9f290e900353d6791c85584767"
+    "source_md5": "cc00e3e9fc34a3c0fc2198f0c47b1aa0"
   },
   {
     "drive_file_id": "1lKQ81_YJIUXnuiMBF8r67gTEqGyN2672",
     "drive_file_name": "Copy of 21ב - פתור.pdf",
-    "source_content_hash": "sha256:0950c82bde9b20ad19ca81fdc0532b85a663b1d548a72efb14e0a6fe37f67755",
+    "source_content_hash": "sha256:36f39c687c393074dab1755d0408240d2760f83a1cc7475375df3122a6f3cd88",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "Under 'פתרונות שלי' (my solutions) ownership marker + exam ancestor, no לתרגם override → user's own exam solution → skip regardless of mode.",
+    "skip_reason": "User's own exam solution: פתר-stem file under exam ancestor (מבחנים) with explicit ownership marker \"פתרונות שלי\"; no לתרגם override. Handwriting signals (tokens_per_page 25.5, bytes_per_token 3036.9) independently confirm.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "86d62126b171dbc05e12f31187a6f5a5"
+    "source_md5": "2cbbdeb201a0ab123906b67898ad932f"
   },
   {
     "drive_file_id": "1ud-SrFgI_B-p_RIiVF-7X8x1Ir3Safgl",
     "drive_file_name": "Copy of מלמ 21א פתור.pdf",
-    "source_content_hash": "sha256:6e4df37c4d3d46bf6a8c7b8ed82fa82989ecfef9bedcf63fad779959064b8731",
+    "source_content_hash": "sha256:ac18c28ded771eb400bfff2adfcf4de50615393284fbae5a37876740d3177232",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "Under 'פתרונות שלי' (my solutions) ownership marker + exam ancestor, no לתרגם override → user's own exam solution → skip regardless of mode.",
+    "skip_reason": "User's own exam solution: פתר-solution file under exam ancestor (מבחנים) with explicit ownership marker folder \"פתרונות שלי\", no לתרגם override; handwritten signals (tokens_per_page 38.9, bytes_per_token 12242, recognizability 0.67) confirm.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "3cb4b1af386921ed1cf18715e9cb9d2a"
+    "source_md5": "b5ee6ade715a02a7e2183bb30a60e34d"
   },
   {
     "drive_file_id": "1ysvfQMvS4CpWMueg2_As5JaAvMfr4KC1",
@@ -10204,62 +10204,62 @@
   {
     "drive_file_id": "1Q_FexBxgSXNWom-QEkK5Ni-4oTFwCmGe",
     "drive_file_name": "Copy of 24 ב נקי.pdf",
-    "source_content_hash": "sha256:b084e93a6e285442d224d7cd427d8576c993702a5fa851854e3d6eb4701ea2c4",
+    "source_content_hash": "sha256:8f76e9d50019e60304b2f3f8aefeb1bac9392e37f425da29b08973e7f5f8289c",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "User's own exam solution: solution segment \"פתרונות שלי\" (stem פתר + ownership marker שלי) under exam folder \"מבחנים\", with no לתרגם override; handwritten signals (tokens_per_page 60.4, bytes_per_token 4923, recognizability 0.58) independently confirm.",
+    "skip_reason": "EXAM SOLUTIONS ownership rule: file sits under exam folder מבחנים inside ownership-marked folder פתרונות שלי (\"my solutions\"), with no לתרגם override; handwriting-level signals (tokens_per_page 68.8, bytes_per_token 5977, recognizability 0.53) confirm the user's own solution → skip.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "47da03b1cf25dfb530aa10b6e70b6728"
+    "source_md5": "b7bb62a48b19338467f860916324e82e"
   },
   {
     "drive_file_id": "1myp3Dr_kClD1zIVwomJ14Q0Iy1GNZRjV",
     "drive_file_name": "Copy of 23ב - פתור.pdf",
-    "source_content_hash": "sha256:fba9ccc7edc7035f46dcfe8771f0f2fb10fee6044ea221339e9a176245cee75b",
+    "source_content_hash": "sha256:00a4cc10f0848959f758026a508ef7103958182cb7db02a82559e178007c0ef7",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "User's own exam solution: solution file (פתור) under exam folder (מבחנים) with explicit ownership marker (פתרונות שלי), no לתרגם override; handwritten signals (tokens_per_page 10.88, bytes_per_token 70315, recognizability 0.45) confirm.",
+    "skip_reason": "User's own exam solution: פתור solution under מבחנים exam folder with explicit ownership marker \"פתרונות שלי\" (and handwritten signals: tokens_per_page 19.25, bytes_per_token 45302, recognizability 0.29). No לתרגם override in path.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "6df84e1d95b51c5fee3af781ead1c256"
+    "source_md5": "e056b2a86f14bccba67d4c18cbd22efc"
   },
   {
     "drive_file_id": "1NokO8YTkeauB9GMEEk3-ywOL_Hlk50Bt",
     "drive_file_name": "Copy of 23 א נקי.pdf",
-    "source_content_hash": "sha256:a178958898d5288f3e59c578b91597e79a5aab85014d8a0c70a5a87ea9e6d633",
+    "source_content_hash": "sha256:0b2ce86779bbbab2c45b87e6b684c57540735b373a04a588c577d546c71b1a1e",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "Exam-solution ownership skip: file sits under מבחנים (exam ancestor) inside a \"פתרונות שלי\" (my solutions) segment — an explicit ownership marker — so it is the user's own exam solution; signals corroborate handwriting (tokens_per_page 34.7, bytes_per_token 3190, recognizability 0.63). No לתרגם override in the path.",
+    "skip_reason": "User's own exam solution: file sits under exam ancestor מבחנים with the ownership-marked solution folder פתרונות שלי (\"my solutions\"), and handwritten signals (tokens_per_page 49.8, bytes_per_token 5904, recognizability 0.50) confirm a scanned personal copy. No לתרגם override present.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "2777ced859be7fc08ec8af3d615c817c"
+    "source_md5": "fd68efe8e5152620d028a55da8adec87"
   },
   {
     "drive_file_id": "1DYldemdlBvg-euhuapGHM7NJ1UwrujBT",
     "drive_file_name": "Copy of -שאלות ממועד א' - מל_מ - 25_7_25 (1).pdf",
-    "source_content_hash": "sha256:2f5a93ba9191a9036906a43ae6312fdfde0baba8f405868c58ed2bc91364b6fb",
+    "source_content_hash": "sha256:f77f3c7a80e72a3e0b0f9d0fa708f3f99f3efceb4b9f9f315a86a1d68955c6d7",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "Exam-solution ownership skip: file sits under מבחנים (exam ancestor) inside a \"פתרונות שלי\" (my solutions) folder — an explicit ownership marker — so it is the user's own exam solution (a typed question form filled in by the user). No לתרגם override in the path, so the ownership marker is decisive regardless of the typed-looking signals.",
+    "skip_reason": "User's own exam solution: file sits under exam ancestor מבחנים with explicit ownership marker פתרונות שלי (\"my solutions\") and no לתרגם override — per EXAM SOLUTIONS ownership rule, skip regardless of typed-looking signals.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "848ed5f3df9d7c0542d47d9637101aed"
+    "source_md5": "593ac0a419539a64f3f94bb3e61de2c3"
   },
   {
     "drive_file_id": "13-ECM9non3723VyfS1FvVoOzWi6LvuaR",
@@ -10283,5 +10283,35 @@
     "max_garbage_run_DIAGNOSTIC": 4,
     "page_count": 4,
     "file_size_kb": 384
+  },
+  {
+    "drive_file_id": "1L_gCFHjQugVH_GahA8yjgj-Mj4L0Radw",
+    "drive_file_name": "2022ב מועד ב שחזור.pdf",
+    "source_content_hash": "sha256:eb0983e66cedbb06922b65a2e0448a53480553a1256403e089bcd2375df94023",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "EXAM SOLUTIONS (ownership): file sits under exam folder מבחנים with an explicit \"my solutions\" marker (פתרונות שלי), and no לתרגם override — the user's own exam solution. Handwritten signals (tokens_per_page 20.86, bytes_per_token 29583.78, recognizability 0.37) independently confirm. Recorded skipped_permanent.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "dbbda88df2c6be820ff333176e9c71ac"
+  },
+  {
+    "drive_file_id": "1xVfjeBT63jJ4WtWGLTFQhf5aRhnyt1ev",
+    "drive_file_name": "פתרון מועד א 2022 ושאלות חשובות.pdf",
+    "source_content_hash": "sha256:249473af1e14f04187402fff3d5c501fb9d2c4a3731f3f599e8dfd90ad562fd4",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solution: פתר-solution file under a מבחנים exam ancestor inside an explicit ownership marker folder \"פתרונות שלי\" (my solutions), with no לתרגם override. Handwritten signals confirm (tokens_per_page 43.5, bytes_per_token 38315, recognizability 0.44).",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "9f931c48b9f6e5686be03772057a1182"
   }
 ]
