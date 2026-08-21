@@ -10313,5 +10313,28 @@
     "input_tokens": 0,
     "output_tokens": 0,
     "source_md5": "9f931c48b9f6e5686be03772057a1182"
+  },
+  {
+    "drive_file_id": "1D8jnjw3gW8xguAolGaudQ5zVHPMrBoz2",
+    "drive_file_name": "שדות הרצאה 13 - פתרון מבחן (25ב).pdf",
+    "source_content_hash": "sha256:e26c8e76da1cf541b40709e5e999c68babd4272db03ba0b6e806179d418f3368",
+    "md_path": "Electromagnetic Fields/Lectures/שדות הרצאה 13 - פתרון מבחן (25ב)_EN.md",
+    "course": "Electromagnetic Fields",
+    "type": "lecture",
+    "translated_at": "2026-08-21T11:53:03Z",
+    "model": "subscription:claude-opus-5",
+    "cost_usd": 0.935967,
+    "input_tokens": 4,
+    "output_tokens": 20932,
+    "chosen_mode": "image",
+    "mode_reasoning": "Name reads \"Fields Lecture 13 – Exam Solution (25B)\": the file's primary identity is הרצאה 13, a numbered entry in the course's lecture series, i.e. official lecturer material in which the exam is worked through — not a solution file nested under a מבחן/בוחן exam folder, and no ownership marker (שלי / \"my\"), so the exam-solution skip case does not fire; translate as type=lecture. Course folder name שדות has no approved mapping; in this EE context it is the standard electromagnetic-fields course, so auto-assigning \"Electromagnetic Fields\" (to be persisted for consistency). Mode: tokens_per_page 20.3 over 6 pages with bytes_per_token ~15.7k and recognizability 0.51 means pypdf extracted almost nothing from a 1.9 MB file — raster/handwritten board scan; math_token_fraction 0.0 confirms there is no typed math layer. Image mode; text mode here would fabricate content.",
+    "source_md5": "e451d0906833a2717817062228f3535a",
+    "recognizability": 0.5082,
+    "tokens_per_page": 20.33,
+    "bytes_per_token": 15662.16,
+    "math_token_fraction": 0.0,
+    "max_garbage_run_DIAGNOSTIC": 6,
+    "page_count": 6,
+    "file_size_kb": 1866
   }
 ]
