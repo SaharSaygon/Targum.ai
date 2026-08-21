@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #c2562b; } a:hover { color: #9a401c; }
+  </style>
+</helmet>
+<div style="width: 1320px; height: 150px; box-sizing: border-box; padding: 24px 32px; background: #ffffff; color: #1a1816; font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif; display: flex; flex-direction: row; gap: 40px; align-items: flex-start;">
+  <div style="display: flex; flex-direction: column; gap: 6px; width: 220px; flex-shrink: 0;">
+    <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.01em;">Targum.ai logo</div>
+    <div style="font-size: 13px; color: #6f6962; line-height: 1.4;">Four directions. Pick one to develop — or mix.</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; flex-grow: 1;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 13px; font-weight: 700;">A · Ligature</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #3d3832;">One bar joins Latin T and Hebrew ת — the product in a single glyph; holds up at 16px.</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #8a827a;">Tradeoff: abstract — reads as a monogram before it reads as "translation".</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 13px; font-weight: 700;">B · Interlinear</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #3d3832;">The Targum tradition is interlinear translation; warm, editorial — suits course material.</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #8a827a;">Tradeoff: lines-on-a-tile is a familiar document trope; leans on its color.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 13px; font-weight: 700;">C · תargum wordmark</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #3d3832;">The name does the work — swapping T for ת says Hebrew-to-English with no symbol; app-like.</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #8a827a;">Tradeoff: relies on the Hebrew glyph rendering; a lone ת favicon is quiet.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 13px; font-weight: 700;">D · Bookmark</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #3d3832;">Academic and friendly; echoes the book icon already in the menubar.</div>
+      <div style="font-size: 12px; line-height: 1.45; color: #8a827a;">Tradeoff: generic education imagery — says "books" more than "translation".</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

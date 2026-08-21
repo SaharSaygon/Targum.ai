@@ -1,0 +1,18 @@
+{
+  "pages": [
+    { "id": "directions", "name": "Directions" },
+    { "id": "develop-a", "name": "Develop A — Ligature" },
+    { "id": "final", "name": "Final" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1320, "h": 150, "title": "Overview" },
+    { "file": "Ligature.dc.html", "x": 0, "y": 200, "w": 640, "h": 420, "title": "Option A — Ligature" },
+    { "file": "Interlinear.dc.html", "x": 680, "y": 200, "w": 640, "h": 420, "title": "Option B — Interlinear" },
+    { "file": "Wordmark.dc.html", "x": 0, "y": 670, "w": 640, "h": 420, "title": "Option C — תargum wordmark" },
+    { "file": "Bookmark.dc.html", "x": 680, "y": 670, "w": 640, "h": 420, "title": "Option D — Bookmark" },
+    { "file": "Refinements.dc.html", "x": 0, "y": 0, "w": 1320, "h": 360, "title": "Refinements", "page": "develop-a" },
+    { "file": "Lockups.dc.html", "x": 0, "y": 420, "w": 1320, "h": 540, "title": "Lockups and sizes", "page": "develop-a" },
+    { "file": "Final.dc.html", "x": 0, "y": 0, "w": 1320, "h": 600, "title": "Final mark", "page": "final" }
+  ],
+  "launch": { "view": "canvas", "page": "final" }
+}

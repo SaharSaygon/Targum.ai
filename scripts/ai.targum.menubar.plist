@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ai.targum.menubar — keeps the Targum menu-bar app (scripts/menubar.py)
+  running. KeepAlive: launchd restarts it if it quits or crashes.
+
+  Install (a COPY, not a symlink):
+    cp scripts/ai.targum.menubar.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.targum.menubar.plist
+  Remove:
+    launchctl bootout gui/$(id -u)/ai.targum.menubar
+  Restart after editing menubar.py:
+    launchctl kickstart -k gui/$(id -u)/ai.targum.menubar
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.targum.menubar</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/saharsaygon/Projects/Targum_ai/.venv/bin/python</string>
+        <string>/Users/saharsaygon/Projects/Targum_ai/scripts/menubar.py</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/saharsaygon/Projects/Targum_ai</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/saharsaygon/Projects/Targum_ai/logs/menubar.err</string>
+</dict>
+</plist>

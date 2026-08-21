@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #b98a2f; } a:hover { color: #8e6a21; }
+  </style>
+</helmet>
+<div style="width: 640px; height: 420px; box-sizing: border-box; padding: 28px 32px; background: #f4efe4; color: #1f4d3a; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; display: flex; flex-direction: column; gap: 24px;">
+  <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: baseline;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Option D — Bookmark</div>
+    <div style="font-size: 13px; color: #7f8a7b; font-style: italic;">academic · forest and brass</div>
+  </div>
+  <div style="display: flex; flex-direction: row; gap: 36px; align-items: center; flex-grow: 1;">
+    <div style="width: 220px; height: 200px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg viewBox="0 0 100 100" width="176" height="176" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="10" width="60" height="78" rx="6" fill="#1f4d3a"></rect>
+        <rect x="20" y="10" width="12" height="78" rx="6" fill="#163829"></rect>
+        <rect x="28" y="10" width="52" height="78" rx="6" fill="#1f4d3a"></rect>
+        <rect x="28" y="10" width="8" height="78" fill="#1f4d3a"></rect>
+        <path d="M58 10 H70 V90 L64 100 L58 90 Z" fill="{{accent}}"></path>
+      </svg>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 52px; font-weight: 600; letter-spacing: -0.015em; line-height: 1;">Targum<span style="color: {{accent}};">.ai</span></div>
+      <div style="font-size: 16px; color: #4f5a4c; font-style: italic;">Hebrew to English, for course material.</div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: row; gap: 28px; align-items: center; padding-top: 18px; border-top: 1px solid #dfd8c6;">
+    <div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
+      <div style="width: 32px; height: 32px; border-radius: 7px; background: #1f4d3a; display: flex; align-items: center; justify-content: center;">
+        <svg viewBox="0 0 100 100" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="10" width="60" height="78" rx="6" fill="#f4efe4"></rect>
+          <rect x="20" y="10" width="12" height="78" rx="6" fill="#cfc7b4"></rect>
+          <rect x="28" y="10" width="52" height="78" rx="6" fill="#f4efe4"></rect>
+          <rect x="28" y="10" width="8" height="78" fill="#f4efe4"></rect>
+          <path d="M58 10 H70 V90 L64 100 L58 90 Z" fill="{{accent}}"></path>
+        </svg>
+      </div>
+      <div style="font-size: 12px; color: #7f8a7b;">favicon 32</div>
+    </div>
+    <div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
+      <svg viewBox="0 0 100 100" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="10" width="60" height="78" rx="6" fill="#1f4d3a"></rect>
+        <path d="M58 4 H70 V92 L64 100 L58 92 Z" fill="#f4efe4"></path>
+        <path d="M60 6 H68 V90 L64 96 L60 90 Z" fill="#1f4d3a"></path>
+      </svg>
+      <div style="font-size: 12px; color: #7f8a7b;">menubar, mono</div>
+    </div>
+    <div style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+      <svg viewBox="0 0 100 100" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="10" width="60" height="78" rx="6" fill="#1f4d3a"></rect>
+        <rect x="20" y="10" width="12" height="78" rx="6" fill="#163829"></rect>
+        <rect x="28" y="10" width="52" height="78" rx="6" fill="#1f4d3a"></rect>
+        <rect x="28" y="10" width="8" height="78" fill="#1f4d3a"></rect>
+        <path d="M58 10 H70 V90 L64 100 L58 90 Z" fill="{{accent}}"></path>
+      </svg>
+      <div style="font-size: 20px; font-weight: 600;">Targum<span style="color: {{accent}};">.ai</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#b98a2f","section":"Color"}}'>
+class Component extends DCLogic {
+  renderVals() { return { accent: this.props.accent ?? '#b98a2f' }; }
+}
+</script>
+</body>
+</html>
