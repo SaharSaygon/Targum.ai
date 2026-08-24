@@ -10359,5 +10359,28 @@
     "max_garbage_run_DIAGNOSTIC": 31,
     "page_count": 55,
     "file_size_kb": 8935
+  },
+  {
+    "drive_file_id": "1A7NXSrB-MGYgEGXX-XaNq0Hqj5xpUfO4",
+    "drive_file_name": "שדות - חוברת הרצאות 1 (1-4).pdf",
+    "source_content_hash": "sha256:d0299765858193cb0eec96ba0c7546a83b73936eb1838a64fd599fa680295b2a",
+    "md_path": "Fields/Lectures/שדות - חוברת הרצאות 1 (1-4)_EN.md",
+    "course": "Fields",
+    "type": "lecture",
+    "translated_at": "2026-08-24T11:11:37Z",
+    "model": "subscription:claude-opus-5",
+    "cost_usd": 3.186021,
+    "input_tokens": 4,
+    "output_tokens": 58384,
+    "chosen_mode": "image",
+    "mode_reasoning": "Filename \"שדות - חוברת הרצאות 1 (1-4)\" = \"Fields - Lecture booklet 1 (lectures 1-4)\": clear LECTURES role (הרצאות) → type: lecture; no solution/homework/exam context, so no skip case applies. Course comes from the \"שדות\" prefix, which is absent from courses.json → auto-named \"Fields\" (persist via update_mapping). Mode: tokens_per_page 99.1 is at the very-low raster threshold, bytes_per_token 1623 is enormous (6.6 MB / 42 pages with almost no extractable text), and recognizability 0.65 with low math_token_fraction (0.056) rules out the \"fragmented typed math\" text case — this is a scanned/photographed booklet → image mode, which is also the safer failure direction.",
+    "source_md5": "4ca5715372f131965d746e3738702f9d",
+    "recognizability": 0.6518,
+    "tokens_per_page": 99.14,
+    "bytes_per_token": 1622.81,
+    "math_token_fraction": 0.0555,
+    "max_garbage_run_DIAGNOSTIC": 33,
+    "page_count": 42,
+    "file_size_kb": 6599
   }
 ]
