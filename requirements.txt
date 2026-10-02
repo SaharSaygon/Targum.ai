@@ -7,3 +7,4 @@ google-auth-oauthlib
 pypdf
 pdf2image
 Pillow
+rumps  # macOS menu-bar app (scripts/menubar.py)

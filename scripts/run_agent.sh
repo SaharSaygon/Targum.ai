@@ -15,8 +15,19 @@
 #
 # One-time setup (see Documentation/unattended_runs.md):
 #   security add-generic-password -a "$USER" -s targum-claude-oauth -w '<token from `claude setup-token`>'
+#
+# Usage: run_agent.sh [--force]
+#   --force  bypass the due-check (menu-bar "Run now"). launchd never passes
+#            it, so scheduled behaviour is unchanged.
 
 set -u
+
+FORCE=0
+case "${1:-}" in
+    --force) FORCE=1 ;;
+    "") ;;
+    *) echo "usage: $0 [--force]" >&2; exit 2 ;;
+esac
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT" || exit 1
@@ -48,20 +59,32 @@ notify() {
     fi
 }
 
-# ── 1. config: interval + auth mode ──────────────────────────────────────────
+# ── 1. config: interval + auth mode + per-run file cap ───────────────────────
+# max_files_per_run (menu-bar "Max files per run") is read raw: core.config
+# ignores unknown keys, so a bad value degrades to 0 = unlimited instead of
+# aborting the run.
 if ! CFG="$("$PY" -c 'from core.config import load_config
-c = load_config(); print(c.run_interval_days, c.auth_mode)' 2>>"$LAUNCHD_LOG")"; then
+from core.paths import CONFIG_PATH
+import json
+c = load_config()
+m = json.loads(CONFIG_PATH.read_text(encoding="utf-8")).get("max_files_per_run", 0)
+m = m if isinstance(m, int) and not isinstance(m, bool) and m > 0 else 0
+print(c.run_interval_days, c.auth_mode, m)' 2>>"$LAUNCHD_LOG")"; then
     llog "CONFIG ERROR — run aborted before due-check"
     notify "Targum run: CONFIG ERROR" \
         "config.json failed to load; the unattended run aborted. See $LAUNCHD_LOG"
     exit 1
 fi
-INTERVAL_DAYS="${CFG%% *}"
-AUTH_MODE="${CFG##* }"
+set -- $CFG
+INTERVAL_DAYS="$1"
+AUTH_MODE="$2"
+MAX_FILES="$3"
 
 # ── 2. due-check: silent no-op when not yet due ──────────────────────────────
 NOW="$(date +%s)"
-if [ -f "$STAMP" ]; then
+if [ "$FORCE" -eq 1 ]; then
+    llog "forced run (--force) — due-check bypassed"
+elif [ -f "$STAMP" ]; then
     LAST="$(cat "$STAMP" 2>/dev/null || echo 0)"
     case "$LAST" in *[!0-9]*|"") LAST=0;; esac
     ELAPSED=$((NOW - LAST))
@@ -108,10 +131,27 @@ done
 [ "$WAITED" -gt 0 ] && llog "network up after ${WAITED}s wait"
 
 # ── 5. run ───────────────────────────────────────────────────────────────────
-llog "due → starting $MODULE (auth_mode=$AUTH_MODE, interval=${INTERVAL_DAYS}d)"
+# max_files_per_run → the SDK agent's --limit (the rest of the worklist
+# reappears next run); the legacy agent has no such flag.
+LIMIT_ARGS=""
+LIMIT_NOTE=""
+if [ "$MAX_FILES" -gt 0 ]; then
+    if [ "$MODULE" = "sdk.agent_sdk" ]; then
+        LIMIT_ARGS="--limit $MAX_FILES"
+        LIMIT_NOTE=", max_files=$MAX_FILES"
+    else
+        LIMIT_NOTE=", max_files=$MAX_FILES IGNORED (legacy path has no --limit)"
+    fi
+fi
+llog "due → starting $MODULE (auth_mode=$AUTH_MODE, interval=${INTERVAL_DAYS}d${LIMIT_NOTE})"
 MARKER="$LOGS_DIR/.run_marker"
+# menu-bar "Kill run" drops this flag right before signalling the agent, so
+# the outcome below reads KILLED instead of CRASHED; clear any stale one
+KILLED_FLAG="$LOGS_DIR/.killed"
+rm -f "$KILLED_FLAG"
 : > "$MARKER"
-"$PY" -m "$MODULE" >> "$LAUNCHD_LOG" 2>&1
+# $LIMIT_ARGS is intentionally unquoted (word-split into "--limit N")
+"$PY" -m "$MODULE" $LIMIT_ARGS >> "$LAUNCHD_LOG" 2>&1
 EXIT=$?
 
 # ── 6. status + stamp + notification ─────────────────────────────────────────
@@ -129,11 +169,16 @@ else
     HAVE_SUMMARY=0
 fi
 
+KILLED=0
+[ -f "$KILLED_FLAG" ] && KILLED=1
+rm -f "$KILLED_FLAG"
+
 case "$EXIT" in
     0) STATUS="OK" ;;
     1) if [ "$HAVE_SUMMARY" -eq 1 ]; then STATUS="DEGRADED"; else STATUS="CRASHED (exit 1)"; fi ;;
     *) STATUS="CRASHED (exit $EXIT)" ;;
 esac
+[ "$KILLED" -eq 1 ] && STATUS="KILLED (from menu bar)"
 
 # stamp only a run that did its work (possibly degraded — those files retry on
 # the next due run); a startup crash leaves the interval unconsumed so the
@@ -141,7 +186,11 @@ esac
 if [ "$EXIT" -eq 0 ] || [ "$HAVE_SUMMARY" -eq 1 ]; then
     echo "$NOW" > "$STAMP"
 else
-    llog "run $RUN_ID crashed before RUN SUMMARY — last_run NOT stamped, retries tomorrow"
+    if [ "$KILLED" -eq 1 ]; then
+        llog "run $RUN_ID killed from menu bar — last_run NOT stamped, retries tomorrow"
+    else
+        llog "run $RUN_ID crashed before RUN SUMMARY — last_run NOT stamped, retries tomorrow"
+    fi
 fi
 llog "run $RUN_ID finished: $STATUS"
 
@@ -151,7 +200,11 @@ if [ "$HAVE_SUMMARY" -eq 1 ]; then
     SUMMARY="$(awk '/RUN SUMMARY/{found=1} found && / : /' "$RUN_LOG" \
                | sed 's/  */ /g' | paste -sd ';' -)"
 else
-    SUMMARY="Run crashed before printing a summary — see ${RUN_LOG:-$LAUNCHD_LOG}"
+    if [ "$KILLED" -eq 1 ]; then
+        SUMMARY="Run killed from the menu bar — unfinished files are re-offered next run"
+    else
+        SUMMARY="Run crashed before printing a summary — see ${RUN_LOG:-$LAUNCHD_LOG}"
+    fi
 fi
 notify "Targum run $RUN_ID: $STATUS" "$SUMMARY"
 

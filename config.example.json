@@ -1,5 +1,5 @@
 {
-  "_note": "Per-user, NON-SECRET config for the Targum.ai agent. Copy this file to config.json and fill in real values. Secrets (ANTHROPIC_API_KEY) stay in .env, NOT here. Once config.json exists the agent reads root_folder_id and vault_path from here; the .env keys DRIVE_SOURCE_FOLDER_ID and OBSIDIAN_VAULT_PATH are now superseded for the agent (the scripts/ bootstrap utility still reads them from .env). spend_cap_usd applies to auth_mode 'api' only — the subscription (SDK) path ignores it, since subscription runs cost no per-token dollars. run_interval_days is the unattended cadence: launchd fires scripts/run_agent.sh daily and the wrapper only runs the agent when this many days have passed since logs/last_run.",
+  "_note": "Per-user, NON-SECRET config for the Targum.ai agent. Copy this file to config.json and fill in real values. Secrets (ANTHROPIC_API_KEY) stay in .env, NOT here. Once config.json exists the agent reads root_folder_id and vault_path from here; the .env keys DRIVE_SOURCE_FOLDER_ID and OBSIDIAN_VAULT_PATH are now superseded for the agent (the scripts/ bootstrap utility still reads them from .env). spend_cap_usd applies to auth_mode 'api' only — the subscription (SDK) path ignores it, since subscription runs cost no per-token dollars. run_interval_days is the unattended cadence: launchd fires scripts/run_agent.sh daily and the wrapper only runs the agent when this many days have passed since logs/last_run. max_files_per_run caps how many worklist files one unattended run processes (SDK path --limit; the rest reappear next run); 0 or absent = unlimited.",
   "root_folder_id": "<google-drive-folder-id-to-scan>",
   "vault_path": "/absolute/path/to/your/Obsidian Vault",
   "model": "claude-opus-5",
@@ -7,5 +7,6 @@
   "tool_call_budget": 200,
   "auth_mode": "subscription",
   "concurrency": 3,
-  "run_interval_days": 7
+  "run_interval_days": 7,
+  "max_files_per_run": 0
 }

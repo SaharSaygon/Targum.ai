@@ -9,11 +9,15 @@ agent:
   logs/last_run      epoch stamp of the last run that reached RUN SUMMARY
   logs/.run_marker   exists while a run is in progress
   logs/agent_sdk_<id>.log / agent_<id>.log   RUN SUMMARY block
-  config.json        run_interval_days, max_files_per_run, root_folder_id (the
-                     only keys this app ever writes; the agent/wrapper re-read
-                     them at each firing)
+  config.json        run_interval_days, max_files_per_run, root_folder_id,
+                     model (the only keys this app ever writes; the
+                     agent/wrapper re-read them at each firing)
   Drive (read-only)  folder names for the "Drive folder" chooser, via
                      core.drive (token.json)
+  Drive for desktop  ~/Library/CloudStorage/GoogleDrive-*: the "Choose folder
+                     in Finder" picker reads the folder's Drive id from its
+                     com.google.drivefs.item-id#S xattr
+  logs/.menubar_recent.json   recently chosen Drive folders (this app's own)
   scripts/ai.targum.agent.plist   daily firing hour (StartCalendarInterval)
   assets/logo/targum-menubar-icon.png   status-item icon (template image; the
                      state emoji is appended as the title)
@@ -31,9 +35,11 @@ import os
 import pathlib
 import plistlib
 import re
+import signal
 import subprocess
 import sys
 import threading
+import time
 import traceback
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -41,12 +47,25 @@ LOGS = ROOT / "logs"
 WRAPPER_LOG = LOGS / "launchd.log"
 STAMP = LOGS / "last_run"
 MARKER = LOGS / ".run_marker"
+KILLED_FLAG = LOGS / ".killed"   # read (and removed) by run_agent.sh
 CONFIG = ROOT / "config.json"
 WRAPPER = ROOT / "scripts" / "run_agent.sh"
 AGENT_PLIST = ROOT / "scripts" / "ai.targum.agent.plist"
+RECENT = LOGS / ".menubar_recent.json"
+CLOUD_STORAGE = pathlib.Path.home() / "Library" / "CloudStorage"
+DRIVEFS_ID_XATTR = "com.google.drivefs.item-id#S"
 
 INTERVALS = (1, 2, 3, 5, 7, 14)
 MAX_FILES_CHOICES = (0, 1, 3, 5, 10, 20, 50)   # 0 = unlimited
+MODELS = (   # (model id, menu label); a config value outside this list is shown too
+    ("claude-opus-5-5", "Opus 5.5"),
+    ("claude-opus-5", "Opus 5"),
+    ("claude-sonnet-5", "Sonnet 5"),
+    ("claude-fable-5-1", "Fable 5.1"),
+    ("claude-haiku-4-5-20251001", "Haiku 4.5"),
+)
+DEFAULT_MODEL = "claude-opus-5"   # core/config.py default when the key is absent
+MAX_RECENT = 8
 ICON = ROOT / "assets" / "logo" / "targum-menubar-icon.png"   # template image (black + alpha): macOS tints it
 BASE_TITLE = "📚"   # text fallback, only used when the icon file is missing
 STATE_EMOJI = {
@@ -131,6 +150,21 @@ def write_max_files(n):
     write_key("max_files_per_run", n)
 
 
+_MODEL_ID = re.compile(r"[a-z0-9][a-z0-9.\-]{2,80}")
+
+
+def write_model(model):
+    """The Claude model id every session of the next run uses (config model)."""
+    model = (model or "").strip()
+    if not _MODEL_ID.fullmatch(model):
+        raise ValueError(f"not a model id: {model!r}")
+    write_key("model", model)
+
+
+def model_label(model):
+    return next((f"{lbl} ({m})" for m, lbl in MODELS if m == model), model)
+
+
 def write_root_folder(folder_id):
     """The Drive folder the agent scans (config root_folder_id). Takes effect on
     the next run; the manifest (translated_log.json) is keyed by file id, so
@@ -200,6 +234,44 @@ def drive_folder_name(folder_id):
     if f.get("mimeType") != drive.FOLDER_MIME:
         raise ValueError(f"'{f.get('name')}' is a file, not a folder")
     return f["id"], f["name"]
+
+
+# ── Drive for desktop (local Finder picker) + recent folders ────────────────
+def drive_mounts():
+    """Local Drive for desktop roots (…/CloudStorage/GoogleDrive-<account>)."""
+    try:
+        return sorted(p for p in CLOUD_STORAGE.iterdir() if p.name.startswith("GoogleDrive-"))
+    except OSError:
+        return []
+
+
+def local_drive_id(path):
+    """Drive file id of a folder synced by Drive for desktop, or None (not a
+    Drive folder / not synced yet)."""
+    r = subprocess.run(["xattr", "-p", DRIVEFS_ID_XATTR, str(path)],
+                       capture_output=True, text=True)
+    fid = r.stdout.strip()
+    return fid if r.returncode == 0 and _DRIVE_ID.fullmatch(fid) else None
+
+
+def read_recent():
+    """[{id, name, path?}] most recent first; [] on any problem."""
+    try:
+        data = json.loads(RECENT.read_text(encoding="utf-8"))
+        return [r for r in data if isinstance(r, dict) and _DRIVE_ID.fullmatch(r.get("id", ""))]
+    except Exception:
+        return []
+
+
+def remember_folder(folder_id, name, path=None):
+    old = next((r for r in read_recent() if r["id"] == folder_id), {})
+    entry = {"id": folder_id, "name": name}
+    if path or old.get("path"):
+        entry["path"] = str(path or old["path"])
+    recent = [entry] + [r for r in read_recent() if r["id"] != folder_id]
+    tmp = RECENT.with_name(RECENT.name + ".tmp")
+    tmp.write_text(json.dumps(recent[:MAX_RECENT], ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(tmp, RECENT)
 
 
 # ── state ───────────────────────────────────────────────────────────────────
@@ -292,6 +364,45 @@ def wrapper_running():
     return MARKER.exists() and wrapper_process() is not None
 
 
+def _descendants(pid):
+    """All descendant pids of pid, depth-first (children before grandchildren)."""
+    r = subprocess.run(["pgrep", "-P", str(pid)], capture_output=True, text=True)
+    out = []
+    for c in (int(x) for x in r.stdout.split()):
+        out.append(c)
+        out.extend(_descendants(c))
+    return out
+
+
+def kill_run(grace=5.0):
+    """Kill the agent (and anything it spawned) under the live wrapper, but NOT
+    the wrapper shell itself: it sees the KILLED_FLAG dropped here and does its
+    normal bookkeeping - logs KILLED, leaves last_run unstamped (the run stays
+    due), notifies, removes .run_marker. SIGTERM first, SIGKILL whatever is
+    still alive after `grace` seconds. Returns the killed pids."""
+    proc = wrapper_process()
+    if not proc:
+        return []
+    wrapper_pid = int(proc.split()[0])
+    pids = _descendants(wrapper_pid)
+    if pids:
+        KILLED_FLAG.touch()
+
+    def signal_all(sig):
+        for p in pids:
+            try:
+                os.kill(p, sig)
+            except ProcessLookupError:
+                pass
+
+    signal_all(signal.SIGTERM)
+    deadline = time.monotonic() + grace
+    while time.monotonic() < deadline and set(_descendants(wrapper_pid)) & set(pids):
+        time.sleep(0.2)
+    signal_all(signal.SIGKILL)
+    return pids
+
+
 def firing_time():
     """(hour, minute) of the daily launchd firing from the agent plist."""
     try:
@@ -362,6 +473,8 @@ def collect_state(drive=None):
         "state": state, "last": last, "summary": summary, "stamp": stamp,
         "interval": interval, "max_files": max_files, "cfg_err": cfg_err,
         "root_id": cfg.get("root_folder_id"), "drive": drive, "vault": cfg.get("vault_path"),
+        "model": cfg.get("model") if isinstance(cfg.get("model"), str) else DEFAULT_MODEL,
+        "recent": read_recent(), "local_drive": bool(drive_mounts()),
         "next_run": nxt, "due_at": due_at, "now": now,
         "latest_log": latest_run_log(), "wrapper_log": WRAPPER_LOG,
     }
@@ -416,6 +529,12 @@ def menu_spec(s):
             for n in choices]
     items.append((label, kids, None))
 
+    cur = s["model"]
+    choices = list(MODELS) + ([] if any(m == cur for m, _ in MODELS) else [(cur, cur)])
+    kids = [(f"{lbl}  ({m})" if lbl != m else m, None, f"model:{m}", m == cur) for m, lbl in choices]
+    kids += [None, ("Other model id…", None, "model_enter")]
+    items.append((f"Model: {model_label(cur)}", kids, None))
+
     items.append(_drive_item(s))
     if s["cfg_err"]:
         items.append((f"config.json: {s['cfg_err'][:80]}", None, None))
@@ -423,6 +542,8 @@ def menu_spec(s):
     # out; the click path re-checks and explains instead
     items.append(("Run now" if s["state"] != "running" else "Run now (a run is in progress)",
                   None, "run_now"))
+    if s["state"] == "running":
+        items.append(("Kill run", None, "kill_run"))
     items.append(None)
     items.append(("Open vault", None, "open_vault"))
     items.append(("Open latest log", None, "open_log"))
@@ -433,13 +554,23 @@ def menu_spec(s):
 
 
 def _drive_item(s):
-    """'Drive folder: <name>' with a chooser submenu: parent, sibling folders,
-    subfolders (each selectable), paste-an-id, open in browser, refresh."""
+    """'Drive folder: <name>' with a chooser submenu: Finder picker, recent
+    folders, parent, sibling folders, subfolders (each selectable),
+    paste-an-id, open in browser, refresh."""
     d, rid = s["drive"], s["root_id"]
     short = f"{rid[:6]}…" if rid else "?"
+    top = []
+    if s.get("local_drive"):
+        top.append(("Choose folder in Finder…", None, "root_pick"))
+    recent = [r for r in s.get("recent", []) if r["id"] != rid]
+    if recent:
+        top.append(("Recent folders:", None, None))
+        top += [(f"    {r['name']}", None, f"root:{r['id']}") for r in recent]
+    if top:
+        top.append(None)
     if d and "root" in d and d["root"]["id"] == rid:
         label = f"Drive folder: {d['root']['name']}"
-        kids = [(f"{d['root']['name']}  ({short})", None, None, True), None]
+        kids = top + [(f"{d['root']['name']}  ({short})", None, None, True), None]
         if d["parent"]:
             kids.append((f"⬆ Up to: {d['parent']['name']}", None, f"root:{d['parent']['id']}"))
         if d["siblings"]:
@@ -451,10 +582,10 @@ def _drive_item(s):
         kids.append(None)
     elif d and "error" in d:
         label = f"Drive folder: {short} (Drive unavailable)"
-        kids = [(f"Drive error: {d['error'][:90]}", None, None), None]
+        kids = top + [(f"Drive error: {d['error'][:90]}", None, None), None]
     else:
         label = f"Drive folder: {short} (loading…)" if rid else "Drive folder: not set"
-        kids = []
+        kids = top
     kids += [("Enter folder URL or id…", None, "root_enter"),
              ("Open in Google Drive", None, "open_drive"),
              ("Refresh folder list", None, "root_refresh")]
@@ -522,13 +653,49 @@ def front_prompt(title, message, default=""):
     return str(field.stringValue())
 
 
+def pick_local_folder(start=None):
+    """Native folder picker (NSOpenPanel, directories only) opened in the Drive
+    for desktop tree. Returns the chosen path, or None on Cancel."""
+    from AppKit import NSApplication, NSFloatingWindowLevel, NSOpenPanel
+    from Foundation import NSURL
+    NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+    panel = NSOpenPanel.openPanel()
+    panel.setCanChooseDirectories_(True)
+    panel.setCanChooseFiles_(False)
+    panel.setAllowsMultipleSelection_(False)
+    panel.setCanCreateDirectories_(False)
+    panel.setTitle_("Drive folder to scan")
+    panel.setMessage_("Pick the Google Drive folder the next Targum run should scan.")
+    panel.setPrompt_("Use this folder")
+    if start:
+        panel.setDirectoryURL_(NSURL.fileURLWithPath_(str(start)))
+    panel.setLevel_(NSFloatingWindowLevel)
+    if panel.runModal() != 1:   # NSModalResponseOK
+        return None
+    return pathlib.Path(str(panel.URLs()[0].path()))
+
+
+def _picker_start():
+    """Where the Finder picker opens: next to the last folder picked through
+    it, else the first account's My Drive."""
+    for r in read_recent():
+        p = pathlib.Path(r.get("path", ""))
+        if r.get("path") and p.exists():
+            return p.parent
+    mounts = drive_mounts()
+    if not mounts:
+        return None
+    my = mounts[0] / "My Drive"
+    return my if my.exists() else mounts[0]
+
+
 def _signature():
     def mt(p):
         try:
             return p.stat().st_mtime
         except OSError:
             return None
-    return (mt(WRAPPER_LOG), mt(CONFIG), mt(STAMP), MARKER.exists())
+    return (mt(WRAPPER_LOG), mt(CONFIG), mt(STAMP), mt(RECENT), MARKER.exists())
 
 
 def main_app():
@@ -634,16 +801,17 @@ def main_app():
 
         def _folder_name(self, folder_id):
             d = (self._state or {}).get("drive") or {}
-            for f in [d.get("root"), d.get("parent")] + d.get("siblings", []) + d.get("children", []):
+            for f in ([d.get("root"), d.get("parent")] + d.get("siblings", []) + d.get("children", [])
+                      + read_recent()):
                 if f and f["id"] == folder_id:
                     return f["name"]
             return folder_id
 
-        def change_root(self, folder_id, name):
+        def change_root(self, folder_id, name, path=None, confirm=True):
             cur = (self._state or {}).get("root_id")
             if folder_id == cur:
                 return
-            choice = front_alert(f"Scan Drive folder '{name}'?",
+            choice = 1 if not confirm else front_alert(f"Scan Drive folder '{name}'?",
                                  "The next run scans this folder (and its subfolders) "
                                  f"instead of '{self._folder_name(cur)}'.\n\nFiles already "
                                  "translated stay recorded; nothing is deleted.",
@@ -651,7 +819,10 @@ def main_app():
             if choice != 1:
                 _log(f"root change to {folder_id} cancelled")
                 return
+            if cur:   # keep the folder we leave one click away
+                remember_folder(cur, self._folder_name(cur))
             write_root_folder(folder_id)
+            remember_folder(folder_id, name, path)
             _log(f"root_folder_id -> {folder_id} ({name})")
             self.invalidate_drive()
             self.rebuild()
@@ -663,6 +834,30 @@ def main_app():
             elif action.startswith("maxfiles:"):
                 write_max_files(action.split(":")[1])
                 self.rebuild()
+            elif action.startswith("model:"):
+                write_model(action[len("model:"):])
+                _log(f"model -> {action[len('model:'):]}")
+                self.rebuild()
+            elif action == "model_enter":
+                text = front_prompt("Claude model",
+                                    "Model id for the next run (e.g. claude-opus-5-5):",
+                                    (self._state or {}).get("model") or "")
+                if text:
+                    write_model(text)
+                    _log(f"model -> {text.strip()}")
+                    self.rebuild()
+            elif action == "root_pick":
+                path = pick_local_folder(_picker_start())
+                if path is None:
+                    return
+                fid = local_drive_id(path)
+                if not fid:
+                    front_alert("Targum", f"Not a Google Drive folder (or not synced yet):\n{path}\n\n"
+                                "Pick a folder inside the Google Drive location in Finder's sidebar.",
+                                ["OK"])
+                    return
+                # choosing in the picker is the confirmation - no second dialog
+                self.change_root(fid, path.name, path=path, confirm=False)
             elif action.startswith("root:"):
                 fid = action[len("root:"):]
                 self.change_root(fid, self._folder_name(fid))
@@ -709,7 +904,25 @@ def main_app():
                 _log(f"run_now confirmed - launched run_agent.sh --force (pid {p.pid})")
                 rumps.notification("Targum", "", "Run started - the wrapper notifies when done.")
                 self.title = status_title("running")
-            elif action == "open_vault":
+            elif action == "kill_run":
+                _log("kill_run clicked")
+                proc = wrapper_process()
+                if not proc:
+                    front_alert("Targum", "No run is in progress.", ["OK"])
+                    self.rebuild()
+                    return
+                # Cancel first (default, Return-key) - same rule as Run now
+                choice = front_alert("Kill the running Targum run?",
+                                     f"Wrapper process: {proc}\n\nThe agent is stopped; files "
+                                     "already translated stay translated, the rest are re-offered "
+                                     "next run (the run stays due).",
+                                     ["Cancel", "Kill run"])
+                if choice != 1:
+                    _log("kill_run cancelled")
+                    return
+                pids = kill_run()
+                _log(f"kill_run confirmed - killed {pids or 'nothing'} under {proc}")
+                self.rebuild()
                 vault = (self._state or {}).get("vault")
                 if vault:
                     subprocess.run(["open", vault])
