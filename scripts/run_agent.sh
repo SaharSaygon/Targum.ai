@@ -8,7 +8,9 @@
 # second invocation the same day is a silent no-op.
 #
 # Sequence: due-check → cd repo root → OAuth token from Keychain → wait for
-# network (wake-triggered firings can beat Wi-Fi re-association) → run agent
+# network (wake-triggered firings can beat Wi-Fi re-association) → model check
+# (upgrade claude-agent-sdk only if its bundled CLI doesn't know the model)
+# → run agent
 # → stamp (only if the agent reached its RUN SUMMARY — a startup crash stays
 # due and retries tomorrow) → log → notify (macOS notification; full summary
 # stays in the logs) → commit state (commit only, no push).
@@ -69,7 +71,7 @@ import json
 c = load_config()
 m = json.loads(CONFIG_PATH.read_text(encoding="utf-8")).get("max_files_per_run", 0)
 m = m if isinstance(m, int) and not isinstance(m, bool) and m > 0 else 0
-print(c.run_interval_days, c.auth_mode, m)' 2>>"$LAUNCHD_LOG")"; then
+print(c.run_interval_days, c.auth_mode, m, c.model)' 2>>"$LAUNCHD_LOG")"; then
     llog "CONFIG ERROR — run aborted before due-check"
     notify "Targum run: CONFIG ERROR" \
         "config.json failed to load; the unattended run aborted. See $LAUNCHD_LOG"
@@ -79,6 +81,7 @@ set -- $CFG
 INTERVAL_DAYS="$1"
 AUTH_MODE="$2"
 MAX_FILES="$3"
+MODEL="$4"
 
 # ── 2. due-check: silent no-op when not yet due ──────────────────────────────
 NOW="$(date +%s)"
@@ -129,6 +132,65 @@ until "$PY" -c 'import socket; socket.getaddrinfo("oauth2.googleapis.com", 443)'
     WAITED=$((WAITED + 10))
 done
 [ "$WAITED" -gt 0 ] && llog "network up after ${WAITED}s wait"
+
+# ── 4b. SDK model check, upgrade ON DEMAND: claude-agent-sdk bundles its own
+#      Claude Code CLI, whose model catalog gates which models work. The last
+#      verified "<sdk version> <model>" pair is cached in $SDK_OK, so the
+#      steady state costs nothing. When the pair changes (new model picked in
+#      the menu bar, SDK changed), a one-line probe runs the configured model;
+#      only a probe the CLI flags [claude-code:unrecognized_model] triggers a
+#      pip upgrade, which is re-probed and rolled back if it doesn't help.
+#      Never blocks the run: any other probe failure (network, auth) is logged
+#      and the run proceeds without caching ─────────────────────────────────
+SDK_OK="$LOGS_DIR/.sdk_model_ok"
+sdk_ver() { "$PY" -c 'from importlib.metadata import version; print(version("claude-agent-sdk"))' 2>/dev/null; }
+sdk_cli() { "$PY" -c 'import claude_agent_sdk, os; print(os.path.join(os.path.dirname(claude_agent_sdk.__file__), "_bundled", "claude"))' 2>/dev/null; }
+probe_model() {
+    # probe_model → prints the CLI output; exit status = the CLI's. 120s cap
+    # (macOS has no `timeout`; perl's alarm kills the exec'd CLI).
+    perl -e 'alarm shift; exec @ARGV' 120 "$(sdk_cli)" -p "reply with exactly: ok" \
+        --model "$MODEL" --max-turns 1 2>&1
+}
+if [ "$MODULE" = "sdk.agent_sdk" ]; then
+    OLD_SDK="$(sdk_ver)"
+    if [ "$(cat "$SDK_OK" 2>/dev/null)" != "$OLD_SDK $MODEL" ]; then
+        OUT="$(probe_model)"; RC=$?
+        if printf '%s' "$OUT" | grep -q 'unrecognized_model'; then
+            llog "model $MODEL unknown to claude-agent-sdk $OLD_SDK — upgrading"
+            if "$PY" -m pip install -q --upgrade --disable-pip-version-check --timeout 30 \
+                    claude-agent-sdk >> "$LAUNCHD_LOG" 2>&1; then
+                NEW_SDK="$(sdk_ver)"
+                if [ "$NEW_SDK" = "$OLD_SDK" ]; then
+                    llog "no newer claude-agent-sdk than $OLD_SDK — model $MODEL stays unrecognized"
+                    notify "Targum: model not recognized" \
+                        "$MODEL is unknown even to the latest claude-agent-sdk ($OLD_SDK). Check the model id in the menu bar."
+                else
+                    OUT="$(probe_model)"; RC=$?
+                    if [ "$RC" -eq 0 ] && ! printf '%s' "$OUT" | grep -q 'unrecognized_model'; then
+                        llog "claude-agent-sdk upgraded $OLD_SDK → $NEW_SDK (model $MODEL now OK)"
+                        echo "$NEW_SDK $MODEL" > "$SDK_OK"
+                    else
+                        llog "claude-agent-sdk $NEW_SDK did not fix model $MODEL — rolling back to $OLD_SDK"
+                        printf '%s\n' "$OUT" | tail -3 >> "$LAUNCHD_LOG"
+                        "$PY" -m pip install -q --disable-pip-version-check \
+                            "claude-agent-sdk==$OLD_SDK" >> "$LAUNCHD_LOG" 2>&1 \
+                            || llog "ROLLBACK FAILED — fix .venv manually"
+                        notify "Targum: model not recognized" \
+                            "$MODEL fails even on claude-agent-sdk $NEW_SDK (rolled back). Check the model id in the menu bar."
+                    fi
+                fi
+            else
+                llog "claude-agent-sdk upgrade failed — continuing on ${OLD_SDK:-unknown}"
+            fi
+        elif [ "$RC" -eq 0 ]; then
+            llog "model check OK: $MODEL on claude-agent-sdk $OLD_SDK"
+            echo "$OLD_SDK $MODEL" > "$SDK_OK"
+        else
+            llog "model check inconclusive (exit $RC, not a catalog issue) — continuing, will re-check next run"
+            printf '%s\n' "$OUT" | tail -3 >> "$LAUNCHD_LOG"
+        fi
+    fi
+fi
 
 # ── 5. run ───────────────────────────────────────────────────────────────────
 # max_files_per_run → the SDK agent's --limit (the rest of the worklist

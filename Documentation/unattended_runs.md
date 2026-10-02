@@ -122,6 +122,16 @@ KeepAlive restarts it if it quits; stderr goes to `logs/menubar.err`.
 
 ## Notes
 
+- **SDK model check (SDK path only).** `claude-agent-sdk` bundles its own
+  Claude Code CLI, and that CLI's model catalog decides which models work. The
+  wrapper caches the last verified `<sdk version> <model>` pair in
+  `logs/.sdk_model_ok`. While that pair is unchanged it does nothing. When it
+  changes, it runs a one-line probe of the configured model (one tiny
+  subscription call). Only a `[claude-code:unrecognized_model]` result triggers
+  `pip install --upgrade claude-agent-sdk`; the upgrade is re-probed and rolled
+  back (with a notification) if it doesn't fix the model. Any other probe
+  failure is logged and the run proceeds. `rm logs/.sdk_model_ok` forces a
+  re-check.
 - `spend_cap_usd` applies to the **api** path only (`legacy/agent.py` stops
   cleanly at the cap); the subscription path ignores it.
 - The agent exits **1** on a degraded run (transient errors / unresolved
