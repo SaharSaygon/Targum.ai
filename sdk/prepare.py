@@ -92,7 +92,8 @@ def prepare_file(item: dict) -> dict:
     source_hash = manifest.sha256_of(pdf_bytes)
 
     # 3. dedup against the manifest (by id gated on hash, cross-ID fallback).
-    verdict = dedup.hash_dedup(entries, file_id, source_hash)
+    verdict = dedup.hash_dedup(entries, file_id, source_hash,
+                               drive_name=item["name"])
     if verdict.get("status") == "already_done":
         if drive_md5 is None:
             # Native Google file dismissed by content hash: refresh the stored

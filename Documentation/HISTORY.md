@@ -1307,3 +1307,32 @@ Fixes in `scripts/run_agent.sh` (see `unattended_runs.md` for the updated
 
 First live test: the 2026-08-09 18:00 firing (due — the 08-06 crash was
 stamped by the old code). Supervised rollout continues from there.
+
+## 2026-09-17 — Skip-floor made non-permanent again; root-level files route to General/Reference
+
+Run 20260916_200723 saw the Drive root reduced to three course-less PDFs
+(degree plan, course-list update, program description). The router sent one
+to `General/Reference` and skip-floored the other two ("no course folder → no
+basis to classify"), and the SDK orchestrator recorded both skip-floor
+decisions as `skipped_permanent` — contradicting the standing "skip-floor =
+run-log only" decision above. Renaming them to `*_to_translate.pdf` changed
+nothing: same id, same md5, so the pre-pass kept dropping them.
+
+Fixes:
+
+- **Routing prompt**: a course-less / root-level file is a routing case, not
+  the skip-floor — `course_english="General"`, `file_type="other"`,
+  `custom_subfolder="Reference"`. The לתרגם override now also matches the
+  Latin `to_translate` / `to translate` marker and beats the skip-floor.
+  Both-modes-refused is explicitly a *permanent* skip (the bytes are the
+  problem; a replaced file has a new md5 and is re-offered anyway).
+- **SDK decision schema** gains `permanent: bool`; `permanent=false` skips are
+  logged as `UNPROCESSED (skip-floor, not recorded)` and counted on a new
+  RUN SUMMARY line, never written to the manifest.
+- **Rename re-offers a recorded skip**: `dedup.skip_unchanged`,
+  `modified_unchanged` (skipped entries) and `hash_dedup` (skipped branch) now
+  take the current Drive filename and treat a name change as a change. The
+  pre-pass and `sdk/prepare.py` pass it through; the legacy path is
+  unaffected (name-blind when omitted).
+- Manifest: the two wrongly recorded skip-floor entries were removed.
+- Tests: `tests/test_skip_floor_and_rename.py`.

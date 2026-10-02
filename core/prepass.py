@@ -62,7 +62,9 @@ def diff_tree(files, entries):
     manifest already accounts for its current bytes — either translated and
     unchanged (dedup.md5_gate) or deliberately skipped and unchanged
     (dedup.skip_unchanged). Everything else (no entry, changed md5, or a
-    not_translated_yet placeholder with no md5) goes in the worklist.
+    not_translated_yet placeholder with no md5) goes in the worklist. A
+    deliberately-skipped file that was RENAMED since (e.g. to add the לתרגם /
+    "to_translate" override) counts as changed and is re-offered.
 
     Naming-blind, skip-blind, no I/O. `files` come from walk_tree; `entries` from
     manifest.load_log()."""
@@ -71,10 +73,10 @@ def diff_tree(files, entries):
         fid, md5 = f["id"], f["md5"]
         if dedup.md5_gate(entries, fid, md5) is not None:
             continue   # already translated, bytes unchanged
-        if dedup.skip_unchanged(entries, fid, md5):
-            continue   # deliberately skipped, bytes unchanged
+        if dedup.skip_unchanged(entries, fid, md5, drive_name=f["name"]):
+            continue   # deliberately skipped, bytes AND name unchanged
         if md5 is None and dedup.modified_unchanged(
-                entries, fid, f.get("modified_time")):
+                entries, fid, f.get("modified_time"), drive_name=f["name"]):
             continue   # native Google file, untouched since last handled
         worklist.append({
             "file_id": fid,

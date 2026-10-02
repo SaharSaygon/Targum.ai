@@ -106,7 +106,8 @@ async def _translate_and_record(ctx, decision, summary):
     )
     mode = decision["mode"]
     status, result = await sessions.translate_file(
-        ctx, mode, decision["course_english"], target, CONFIG.model)
+        ctx, mode, decision["course_english"], target, CONFIG.model,
+        unofficial_solution=bool(decision.get("unofficial_solution")))
     if result is not None:
         _record_session(f"translation_{mode}", result, CONFIG.model)
 
@@ -183,17 +184,26 @@ async def _process_file_once(item, path, summary):
         LOG(f"  route[{path}] round {round_}: {json.dumps(decision, ensure_ascii=False)}")
 
         if decision["action"] == "skip":
+            reason = decision.get("skip_reason") or decision["reasoning"]
+            if decision.get("permanent") is False:
+                # Skip-floor (cannot classify): run-log only, NO manifest entry
+                # (ARCHITECTURE §8). Nothing recorded → the pre-pass re-offers
+                # the file next run, so a rename/move between runs is enough
+                # to get it translated. Not an error: exit status unaffected.
+                LOG(f"  UNPROCESSED (skip-floor, not recorded): {path} — {reason}")
+                summary["unprocessed"].append((ctx.name, reason))
+                return
             vault.record_skip(
                 drive_file_id=ctx.file_id,
                 drive_filename=ctx.name,
                 source_hash=ctx.source_hash,
-                skip_reason=decision.get("skip_reason") or decision["reasoning"],
+                skip_reason=reason,
                 source_md5=ctx.drive_md5,
                 source_modified_time=(
                     ctx.modified_time if ctx.drive_md5 is None else None),
             )
-            LOG(f"  SKIPPED (permanent): {path} — {decision.get('skip_reason')}")
-            summary["skipped"].append((ctx.name, decision.get("skip_reason")))
+            LOG(f"  SKIPPED (permanent): {path} — {reason}")
+            summary["skipped"].append((ctx.name, reason))
             return
 
         # 3. TRANSLATE session
@@ -216,6 +226,11 @@ async def _process_file_once(item, path, summary):
             raise RuntimeError(f"unresolved after re-route: {outcome}")
 
 
+def _empty_summary():
+    return {"saved": [], "skipped": [], "unprocessed": [], "already_done": [],
+            "errors": [], "events": []}
+
+
 async def _amain(cfg, root_folder_id, limit=None):
     global CONFIG
     CONFIG = cfg
@@ -234,11 +249,11 @@ async def _amain(cfg, root_folder_id, limit=None):
     print(f"Pre-pass: {len(worklist)}/{total_scanned} file(s) need work.")
     if not worklist:
         print("Nothing to do.")
-        return {"saved": [], "skipped": [], "already_done": [], "errors": [], "events": []}
+        return _empty_summary()
 
     await _resolve_new_courses(worklist, cfg.model)
 
-    summary = {"saved": [], "skipped": [], "already_done": [], "errors": [], "events": []}
+    summary = _empty_summary()
     semaphore = asyncio.Semaphore(cfg.concurrency)
     await asyncio.gather(*(
         _process_file(item, semaphore, summary) for item in worklist
@@ -309,6 +324,8 @@ def main(argv=None):
         *(f"   - {name} → {md}" for name, md in summary["saved"]),
         f"deliberate skips (perm) : {len(summary['skipped'])}",
         *(f"   - {name}: {reason}" for name, reason in summary["skipped"]),
+        f"skip-floor (unprocessed, re-offered next run) : {len(summary['unprocessed'])}",
+        *(f"   - {name}: {reason}" for name, reason in summary["unprocessed"]),
         f"already_done (dedup)    : {len(summary['already_done'])}",
         f"unresolved events       : {len(summary['events'])}"
         + ("" if not summary["events"] else " " + str(summary["events"])),

@@ -231,7 +231,10 @@ and it is **narrow**: a solution file whose name carries the **פתר** stem
 answer sheet. **Both stems together are required.** The handler writes a
 `skipped_permanent` manifest entry keyed by `drive_file_id` (with `source_md5`
 from the read_file cache), so the next run's pre-pass drops the file via
-`dedup.skip_unchanged` while its bytes are unchanged. The old broad keyword rule
+`dedup.skip_unchanged` while its bytes **and name** are unchanged — renaming a
+skipped file (e.g. adding the לתרגם / `_to_translate` override marker) counts as
+a change and re-offers it, which is the user's one lever on a recorded skip.
+The old broad keyword rule
 (פתרון / תשובות / מענה matched anywhere) is **gone**: a פתר-stem file *outside*
 the homework context is translated by default.
 
@@ -240,9 +243,13 @@ classification (gibberish/unreadable name, no resolving context). This is
 **run-log only** — the agent logs it as unprocessed in its reasoning and the run
 log, and writes **no manifest entry**. Because nothing is recorded, such a file
 reappears on the next run's worklist. `skip_file` must **not** be called for
-these. The pre-pass itself performs **no** skip logic of either kind — it is
-skip-blind; a deliberately-skipped file stays cheap only because its bytes are
-unchanged (md5), not because the pre-pass understands it.
+these; on the SDK path the route decision carries `permanent=false` and the
+orchestrator logs `UNPROCESSED (skip-floor, not recorded)` without touching the
+manifest. A file that merely lacks a course folder (sits at the scanned root)
+is **not** a skip-floor case: it routes to `General/Reference`. The pre-pass
+itself performs **no** skip logic of either kind — it is skip-blind; a
+deliberately-skipped file stays cheap only because its bytes and name are
+unchanged, not because the pre-pass understands it.
 
 ---
 

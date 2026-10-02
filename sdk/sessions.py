@@ -48,6 +48,18 @@ ROUTE_DECISION_SCHEMA = {
                 "type": ["string", "null"],
                 "description": "Required when action=skip: the rule that fired.",
             },
+            "permanent": {
+                "type": "boolean",
+                "description": (
+                    "With action=skip: true for a deliberate skip of the file "
+                    "itself (the user's own solutions; a source both modes "
+                    "refused) — recorded in the manifest so it never comes "
+                    "back while its bytes are unchanged. false for the "
+                    "skip-floor (cannot classify from path/name) — run-log "
+                    "only, the file is offered again next run. Always false "
+                    "with action=translate."
+                ),
+            },
             "mode": {"type": ["string", "null"], "enum": ["text", "image", None]},
             "course_english": {"type": ["string", "null"]},
             "file_type": {
@@ -58,11 +70,22 @@ ROUTE_DECISION_SCHEMA = {
                 "type": ["string", "null"],
                 "description": "Only with file_type=other: verbatim subfolder name.",
             },
+            "unofficial_solution": {
+                "type": "boolean",
+                "description": (
+                    "With action=translate: true for an UNOFFICIAL exam "
+                    "solution (a פתר-solution under an exam folder that is "
+                    "handwritten or otherwise not clearly official — "
+                    "typically a past student's upload). The translation is "
+                    "then flagged and annotated for review. false otherwise, "
+                    "and always false with action=skip."
+                ),
+            },
             "reasoning": {"type": "string"},
         },
         "required": [
-            "action", "skip_reason", "mode", "course_english",
-            "file_type", "custom_subfolder", "reasoning",
+            "action", "skip_reason", "permanent", "mode", "course_english",
+            "file_type", "custom_subfolder", "unofficial_solution", "reasoning",
         ],
         "additionalProperties": False,
     },
@@ -157,9 +180,14 @@ def _route_prompt(ctx, courses_block: str, extra_context: str | None) -> str:
     if extra_context:
         parts.append(f"## Additional context from a previous attempt\n{extra_context}")
     parts.append(
-        "Decide now and return the structured decision. skip_reason only for "
-        "skips; mode/course_english/file_type only for translations "
-        "(custom_subfolder only with file_type=other)."
+        "Decide now and return the structured decision. skip_reason and "
+        "permanent only matter for skips — permanent=true is a deliberate "
+        "skip of the file itself (recorded; never re-offered while its bytes "
+        "are unchanged), permanent=false is the skip-floor (run-log only; "
+        "offered again next run, so a rename/move by the user gets it "
+        "picked up); mode/course_english/file_type only for translations "
+        "(custom_subfolder only with file_type=other); unofficial_solution "
+        "only for translated exam solutions that aren't clearly official."
     )
     return "\n\n".join(parts)
 
@@ -201,6 +229,26 @@ def extract_pdf_text(pdf_bytes: bytes) -> str:
     return extracted
 
 
+UNOFFICIAL_SOLUTION_INSTRUCTION = (
+    "## This source is an UNOFFICIAL solution\n"
+    "It was written and uploaded by a past student (no official solution was "
+    "published). Such solutions are usually good but not necessarily correct "
+    "or optimal, so the reader must review it with care:\n"
+    "1. Add `solution_source: unofficial-student` to the YAML frontmatter.\n"
+    "2. Directly under the H1, insert exactly this callout:\n"
+    "   > [!warning] Unofficial student solution\n"
+    "   > Written by a past student, not the course staff. Usually good, but "
+    "not guaranteed correct or optimal — check each step.\n"
+    "3. Translate the student's work FAITHFULLY — never silently fix it.\n"
+    "4. Wherever a step looks wrong (math, sign, units, a skipped "
+    "justification, a misread question) or a clearly simpler / more standard "
+    "method exists, add right after that step a callout\n"
+    "   > [!note] Review: <what looks off, or the better approach, briefly>\n"
+    "   Only where warranted — do not annotate correct steps.\n"
+    "5. List every Review callout (one line each) in Translator Notes."
+)
+
+
 def _write_instruction(target: Path) -> str:
     return (
         "Write the COMPLETE translated markdown document to this exact "
@@ -218,12 +266,15 @@ def _write_instruction(target: Path) -> str:
 
 
 async def translate_file(ctx, mode: str, course_english: str, target: Path,
-                         model: str) -> tuple[str, ResultMessage | None]:
+                         model: str, unofficial_solution: bool = False
+                         ) -> tuple[str, ResultMessage | None]:
     """Run the TRANSLATE session. Returns (status, result) where status is
     "saved" | "refused: <reason>" | "text_extraction_failed: <reason>".
     The .md is written by the session itself; the caller verifies and records.
+    unofficial_solution adds the student-solution warning + review notes.
     """
     today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    review = f"{UNOFFICIAL_SOLUTION_INSTRUCTION}\n\n" if unofficial_solution else ""
 
     if mode == "text":
         try:
@@ -239,6 +290,7 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
                 f"Course: {course_english}\n"
                 f"Source file: {ctx.name}\n\n"
                 f"{extracted}\n\n"
+                f"{review}"
                 f"{_write_instruction(target)}"
             ),
         }]
@@ -255,6 +307,7 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
                 "you can see them.\n\n"
                 f"Course: {course_english}\n"
                 f"Source file: {ctx.name}\n\n"
+                f"{review}"
                 f"{_write_instruction(target)}"
             ),
         }]
