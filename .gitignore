@@ -26,3 +26,6 @@ logs/
 Documentation/archive/day_1_checklist.md
 Documentation/archive/day_2_checklist.md
 Documentation/archive/hebrew_translator_project_plan.md
+
+# Claude Code per-user settings
+.claude/
