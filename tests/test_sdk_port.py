@@ -146,6 +146,38 @@ class ExtractionGuardTests(unittest.TestCase):
             extract_pdf_text(buf.getvalue())
 
 
+class TranslateCwdTests(unittest.TestCase):
+    def test_new_course_folder_is_created_before_session_starts(self):
+        """First file of a NEW course: the vault course folder doesn't exist
+        yet, but the CLI refuses a non-existent cwd — translate_file must
+        create target.parent before starting the session (run 20260821_111735
+        failed every attempt with 'Working directory does not exist')."""
+        import asyncio
+        from sdk import sessions
+
+        seen = {}
+
+        async def fake_run(options, prompt):
+            seen["cwd"] = options.cwd
+            seen["cwd_exists"] = Path(options.cwd).is_dir()
+            return type("R", (), {"result": "SAVED", "usage": {}, "total_cost_usd": 0.0})()
+
+        orig_run, orig_extract = sessions._run, sessions.extract_pdf_text
+        sessions._run = fake_run
+        sessions.extract_pdf_text = lambda _b: "x" * 100
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                target = Path(d) / "Electromagnetic Fields" / "Lectures" / "f_EN.md"
+                self.assertFalse(target.parent.exists())
+                status, _ = asyncio.run(sessions.translate_file(
+                    _ctx(), "text", "Electromagnetic Fields", target, "m"))
+                self.assertEqual(status, "saved")
+                self.assertEqual(seen["cwd"], str(target.parent))
+                self.assertTrue(seen["cwd_exists"])
+        finally:
+            sessions._run, sessions.extract_pdf_text = orig_run, orig_extract
+
+
 class OutputPathTests(unittest.TestCase):
     def test_other_type_uses_custom_subfolder(self):
         p = vault.vault_output_path(Path("/v"), "C", "other", "x.pdf",

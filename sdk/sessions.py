@@ -267,6 +267,11 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
     async def _prompt_stream():
         yield {"type": "user", "message": {"role": "user", "content": content}}
 
+    # The CLI refuses to start in a cwd that doesn't exist, and a NEW course's
+    # vault folder only comes into being when its first file is written — so
+    # create it up front or the first file of every new course fails forever.
+    target.parent.mkdir(parents=True, exist_ok=True)
+
     options = ClaudeAgentOptions(
         system_prompt=system,
         model=model,
