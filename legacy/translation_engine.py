@@ -53,13 +53,12 @@ MAX_IMAGE_OUTPUT_TOKENS = 64000
 
 # ── Cost calculation ───────────────────────────────────────────────────────────
 # Delegates to costs.tiered_cost — the single cache-aware pricing source (also
-# used by the routing ledger). Translation calls carry no cache tokens, so the
-# tiered formula yields the same value as the old flat input*5+output*25. Vision
+# used by the routing ledger), priced at MODEL's rates (costs.PRICES). Vision
 # input tokens are priced like text input; Anthropic tokenises images internally
 # (~1600 tokens per 512×512 tile). Signature kept so callers/manifest are unaffected.
 
-def _calc_cost(usage) -> float:
-    return costs.tiered_cost(usage, MODEL)
+def _calc_cost(usage, model: str = MODEL) -> float:
+    return costs.tiered_cost(usage, model)
 
 
 def _markdown_or_refusal(response) -> str:
@@ -155,7 +154,7 @@ def translate_text_pdf(
         "markdown":      _markdown_or_refusal(response),
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
-        "cost_usd":      round(_calc_cost(usage), 6),
+        "cost_usd":      round(_calc_cost(usage, model), 6),
         "model":         model,
         "mode":          "text",
     }
@@ -238,7 +237,7 @@ def translate_image_pdf(
         "markdown":      _markdown_or_refusal(response),
         "input_tokens":  usage.input_tokens,
         "output_tokens": usage.output_tokens,
-        "cost_usd":      round(_calc_cost(usage), 6),
+        "cost_usd":      round(_calc_cost(usage, model), 6),
         "model":         model,
         "mode":          "image",
     }
