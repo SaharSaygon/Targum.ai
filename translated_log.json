@@ -13088,5 +13088,28 @@
     "max_garbage_run_DIAGNOSTIC": 28,
     "page_count": 25,
     "file_size_kb": 1245
+  },
+  {
+    "drive_file_id": "14wSuN3djcjBxAJzWh-xOyB2tF5G1ozL_",
+    "drive_file_name": "שדות אמ 2026 - הנחיות_קיץ.pdf",
+    "source_content_hash": "sha256:4b48e1d130194ff205d956762cc83b69f4f7589075651caa357cb0c8d6a11563",
+    "md_path": "Electromagnetic Fields/Reference/שדות אמ 2026 - הנחיות_קיץ_EN.md",
+    "course": "Electromagnetic Fields",
+    "type": "Reference",
+    "translated_at": "2026-10-03T11:02:58Z",
+    "model": "subscription:claude-opus-5-5",
+    "cost_usd": 0.359411,
+    "input_tokens": 4,
+    "output_tokens": 5560,
+    "chosen_mode": "text",
+    "mode_reasoning": "Root-level file, but its name says \"שדות אמ\", short for שדות אלקטרומגנטיים, which is mapped to Electromagnetic Fields. \"הנחיות_קיץ\" (summer guidelines) is course reference material, not a lecture, tutorial, homework or exam, so file_type=other with custom_subfolder=Reference. Judgment call: a strict reading of the root-level rule would send it to General/Reference, but the course is clearly named. Mode is text because the signals show a typed document: recognizability 0.92, 406 tokens per page, math_token_fraction 0.04, 3 pages.",
+    "source_md5": "4bf12467e92e089187d10cc2c956c9fb",
+    "recognizability": 0.9178,
+    "tokens_per_page": 405.67,
+    "bytes_per_token": 240.64,
+    "math_token_fraction": 0.0378,
+    "max_garbage_run_DIAGNOSTIC": 9,
+    "page_count": 3,
+    "file_size_kb": 286
   }
 ]
