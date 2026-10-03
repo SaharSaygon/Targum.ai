@@ -22,10 +22,10 @@ download — that would defeat the point for unchanged files. hash_dedup stays t
 post-download authority INSIDE the loop (read_file_logic); the pre-pass uses the
 md5 gates (md5_gate for translated, skip_unchanged for deliberate skips).
 """
-from core import dedup, drive, manifest
+from core import courses, dedup, drive, manifest
 
 
-def walk_tree(root_folder_id, list_children):
+def walk_tree(root_folder_id, list_children, base_path=()):
     """Recurse the Drive tree from root, collecting every FILE (folders are
     traversed, not emitted).
 
@@ -33,9 +33,11 @@ def walk_tree(root_folder_id, list_children):
     (type is "folder"/"file"). Injected so tests can pass a mock tree.
 
     Returns [{id, name, parent_path, md5}], where parent_path is the list of Hebrew
-    folder names from the first level down to the file's immediate parent (the root
-    folder itself is not included — the loop knows it's the semester root). The
-    loop classifies course + type from parent_path + name."""
+    folder names from the first level down to the file's immediate parent, prefixed
+    by base_path. The root folder's own name is NOT added here: a semester root's
+    name is not a course, so build_worklist passes it as base_path only when the
+    root is itself a course folder. The loop classifies course + type from
+    parent_path + name."""
     files = []
 
     def rec(folder_id, path):
@@ -52,7 +54,7 @@ def walk_tree(root_folder_id, list_children):
                     "modified_time": c.get("modifiedTime"),
                 })
 
-    rec(root_folder_id, [])
+    rec(root_folder_id, list(base_path))
     return files
 
 
@@ -86,12 +88,23 @@ def diff_tree(files, entries):
     return worklist
 
 
+def root_base_path(root_name, mapping):
+    """[root_name] when the scanned root IS a course folder (its name is an
+    approved course mapping), else []. Without this, a course-folder root yields
+    paths with no course segment and the loop can only guess the course from the
+    filename — files that don't name it fall to General."""
+    return [root_name] if root_name in mapping else []
+
+
 def build_worklist(root_folder_id):
     """Wire the real Drive walk + manifest into diff_tree. Returns
     (worklist, total_files_scanned). The only function here that does I/O."""
+    base = root_base_path(drive.folder_name(root_folder_id),
+                          courses.load_courses())
     files = walk_tree(
         root_folder_id,
         lambda fid: drive.list_folder_children(fid, include_md5=True),
+        base_path=base,
     )
     entries = manifest.load_log()
     return diff_tree(files, entries), len(files)

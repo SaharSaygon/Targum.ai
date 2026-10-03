@@ -142,6 +142,13 @@ def file_meta(file_id):
     ).execute(num_retries=_NUM_RETRIES)
 
 
+def folder_name(folder_id):
+    """The Drive name of one folder (or file). Cheap metadata call."""
+    return get_service().files().get(
+        fileId=folder_id, fields="name"
+    ).execute(num_retries=_NUM_RETRIES)["name"]
+
+
 def list_folder_children(folder_id, include_md5=False):
     """Direct children of a Drive folder — NOT recursive. The agent walks the
     tree itself via repeated calls. Paginates so 100+ file folders don't truncate.
