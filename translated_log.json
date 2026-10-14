@@ -13870,5 +13870,50 @@
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 19,
     "file_size_kb": 10197
+  },
+  {
+    "drive_file_id": "1Q4EzIZLc2qnPcRDN0-PxjkZ_CoM-B-G-",
+    "drive_file_name": "עותק של שדות - 2025 א - נקי.pdf",
+    "source_content_hash": "sha256:21667b6e27838812bc8bf4ee9a800e86e9b7ec27c7bfae8ec5ec10c9939d0d11",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solution: path segment 'פתרונות שלי - לא לתרגם' under the exams folder 'מבחנים' carries the 'my solutions' ownership marker, and the folder explicitly says 'do not translate'.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "badf1caa5cac7e789d191e70318ba3dc"
+  },
+  {
+    "drive_file_id": "10Kqg5qKjwNuPUQxoFyBp6X6By2pm4lpH",
+    "drive_file_name": "עותק של שדות קיץ 2024 מועד א.pdf",
+    "source_content_hash": "sha256:bde1f7d7094cd62cac06a04aafad49b8b4496968520ebdd0da5d23af7ba4eabd",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solution: the folder 'פתרונות שלי' ('my solutions') sits under an exam folder (מבחנים / מועד א). The folder name also says 'לא לתרגם' ('do NOT translate'). That is a negated לתרגם marker, so it does not trigger the translate override.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "c5038d7cc096429dbfb37f630f80fe19"
+  },
+  {
+    "drive_file_id": "1duiDCtfbwk3kJVQy0y6TYgfZIp9GWHo3",
+    "drive_file_name": "עותק של שדות - 2025 קיץ א - נקי - טניה (פורמט דומה).pdf",
+    "source_content_hash": "sha256:04fbf2fa8518e8d0758ae258230cfad714e58d0d71c318c33d27fe1be67a69a1",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solutions: path segment 'פתרונות שלי - לא לתרגם' under מבחנים carries the ownership marker 'פתרונות שלי' and an explicit 'לא לתרגם' (do NOT translate). The negated marker is not the translate override.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "a0d3a0b9835f35b48bcd4734a2cfe1de"
   }
 ]
