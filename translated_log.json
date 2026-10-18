@@ -13874,17 +13874,17 @@
   {
     "drive_file_id": "1Q4EzIZLc2qnPcRDN0-PxjkZ_CoM-B-G-",
     "drive_file_name": "עותק של שדות - 2025 א - נקי.pdf",
-    "source_content_hash": "sha256:21667b6e27838812bc8bf4ee9a800e86e9b7ec27c7bfae8ec5ec10c9939d0d11",
+    "source_content_hash": "sha256:09043b04bc0a458e5c0f3283c2ff9492e05abd2a1eb960edfc7e512b7fe29c33",
     "md_path": null,
     "course": null,
     "type": null,
     "translated_at": null,
     "model": "skipped_permanent",
-    "skip_reason": "User's own exam solution: path segment 'פתרונות שלי - לא לתרגם' under the exams folder 'מבחנים' carries the 'my solutions' ownership marker, and the folder explicitly says 'do not translate'.",
+    "skip_reason": "The file is your own exam solution. It sits under מבחנים (exams) in a folder named \"פתרונות שלי - לא לתרגם\" (\"my solutions – do not translate\"). \"לא לתרגם\" means do NOT translate, so the translate override doesn't apply.",
     "cost_usd": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "source_md5": "badf1caa5cac7e789d191e70318ba3dc"
+    "source_md5": "a435693eaa88d20bac9dc5c7525a0273"
   },
   {
     "drive_file_id": "10Kqg5qKjwNuPUQxoFyBp6X6By2pm4lpH",
@@ -13915,5 +13915,65 @@
     "input_tokens": 0,
     "output_tokens": 0,
     "source_md5": "a0d3a0b9835f35b48bcd4734a2cfe1de"
+  },
+  {
+    "drive_file_id": "1cPfx7hax26-B6Yj7TCAfiKVXfWmtjP8J",
+    "drive_file_name": "Note 15 Oct 2026.pdf",
+    "source_content_hash": "sha256:3af01946af265641d04660b1248df70e8c0145fb00513e34be5cbe0a07325a60",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "Exam solution under a \"my solutions\" marker (פתרונות שלי) inside מבחנים: the user's own solution. Folder name says \"לא לתרגם\" (\"do not translate\"), which is a negation, not the לתרגם translate override.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "0b5f13dcb415b9e3465271a2f4b9fd57"
+  },
+  {
+    "drive_file_id": "1ehfYtN4nvyv47zzmUl6D1eiBI6df5PHL",
+    "drive_file_name": "exam_moed_b_blank.pdf",
+    "source_content_hash": "sha256:8f1674807aa194f434455d5eaf490d96a947d1ceef3fb48dc00bde9fd9784c15",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "The user's own exam solution: the file sits under a \"פתרונות שלי\" (\"my solutions\") folder inside מבחנים (Exams). The folder name also says \"לא לתרגם\" (\"do not translate\"), which is a negated instruction, not the לתרגם translate override.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "3700fd98c217c137c79571f886f44122"
+  },
+  {
+    "drive_file_id": "1ghL0AZS_DjQ28N2iT2IH8L5KmGrDyO9g",
+    "drive_file_name": "exam_blank_template.pdf",
+    "source_content_hash": "sha256:bef109941c49f99e880ee7f77f06dcc57b69d06915b80f36838fce3b3c3db843",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solutions: path under מבחנים contains the 'פתרונות שלי' (my solutions) marker; the folder name explicitly says 'לא לתרגם' (do NOT translate), a negation, not the translate override.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "dd37433803da3e885882726f5357f746"
+  },
+  {
+    "drive_file_id": "1mthMjntVwvn33K7vDGTlWnnajg5-QV3Q",
+    "drive_file_name": "בחינה_לדוגמא_2026_קיץ_מידן.pdf",
+    "source_content_hash": "sha256:11bbda4b596786dc500a4c9d372e03419fd99bacb03fdef1f95dfa02aaa92e4f",
+    "md_path": null,
+    "course": null,
+    "type": null,
+    "translated_at": null,
+    "model": "skipped_permanent",
+    "skip_reason": "User's own exam solutions: path segment 'פתרונות שלי - לא לתרגם' (\"my solutions – do NOT translate\") under the מבחנים (exams) folder. The לתרגם (translate) override doesn't apply because it's negated by לא, which states the user's intent not to translate.",
+    "cost_usd": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "source_md5": "4d72aab765a87c18f69da6aa240dc11a"
   }
 ]
