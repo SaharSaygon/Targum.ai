@@ -14021,5 +14021,28 @@
     "max_garbage_run_DIAGNOSTIC": 74,
     "page_count": 89,
     "file_size_kb": 3461
+  },
+  {
+    "drive_file_id": "1JQhrsjrFisxJHMoIhM_s5eFmewB03bum",
+    "drive_file_name": "לינאריות - 2026 א - דבורא - נקי (שחזור).pdf",
+    "source_content_hash": "sha256:96f5b719b5d2e13360ff0fa8c03829273fe8027a20cad5e17aee5f7cbb3f7486",
+    "md_path": "Introduction to Linear Systems/Exams/לינאריות - 2026 א - דבורא - נקי (שחזור)_EN.md",
+    "course": "Introduction to Linear Systems",
+    "type": "exam",
+    "translated_at": "2026-10-21T13:13:25Z",
+    "model": "subscription:claude-opus-5-5",
+    "cost_usd": 0.48473,
+    "input_tokens": 4,
+    "output_tokens": 5182,
+    "chosen_mode": "image",
+    "mode_reasoning": "Root-level file, but the filename gives both the course and the role. \"לינאריות\" (linearity) is the usual short name for the approved course מבוא למערכות לינאריות → Introduction to Linear Systems. \"2026 א … נקי (שחזור)\" means a clean (no answers) reconstruction of the 2026 Moed A (first sitting) exam, so the type is exam. It isn't a solution file, so neither skip case applies. Mode is image: 186.75 tokens per page is under the ~200 healthy line, and 540 bytes per token is high. A linear-systems exam with math_token_fraction 0.0 suggests the equations weren't extracted as text, so text mode would lose them. Recognizability is 0.906, but the case is borderline, so I default to image.",
+    "source_md5": "5af3262ca22477b022b5ef5fb80e7f70",
+    "recognizability": 0.9063,
+    "tokens_per_page": 186.75,
+    "bytes_per_token": 540.1,
+    "math_token_fraction": 0.0,
+    "max_garbage_run_DIAGNOSTIC": 2,
+    "page_count": 4,
+    "file_size_kb": 394
   }
 ]
