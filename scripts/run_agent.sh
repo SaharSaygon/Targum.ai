@@ -24,6 +24,10 @@
 
 set -u
 
+# launchd's default PATH lacks /opt/homebrew/bin, so pdf2image can't find
+# poppler (pdfinfo/pdftoppm) and every image-mode file fails.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 FORCE=0
 case "${1:-}" in
     --force) FORCE=1 ;;
