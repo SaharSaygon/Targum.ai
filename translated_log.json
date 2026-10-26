@@ -14182,5 +14182,28 @@
     "max_garbage_run_DIAGNOSTIC": 23,
     "page_count": 72,
     "file_size_kb": 8737
+  },
+  {
+    "drive_file_id": "1xR1ngEdriwSi4LUjjrO927gn4MM5uEhx",
+    "drive_file_name": "Microsoft Word - entrance exam.pdf",
+    "source_content_hash": "sha256:75c0c6b2d46fbbbcc5826129c328fdbfe51ca4a895d95f0dd4560d6ae40edb3e",
+    "md_path": "Analog Circuits Lab/Exams/Microsoft Word - entrance exam_EN.md",
+    "course": "Analog Circuits Lab",
+    "type": "exam",
+    "translated_at": "2026-10-26T11:50:28Z",
+    "model": "subscription:claude-opus-5-5",
+    "cost_usd": 0.492491,
+    "input_tokens": 4,
+    "output_tokens": 5757,
+    "chosen_mode": "image",
+    "mode_reasoning": "Course: מעבדת מעגלים אנלוגיים is an approved mapping, Analog Circuits Lab. Type: the parent folder בוחן כניסה means \"entrance quiz\", so the type is exam. The file is not a solution, so neither solution-skip rule applies. Mode is image. The PDF was exported from Word, so it is typed, but text extraction looks weak. Recognizability is low (0.65, well under ~0.85) and the text yield is borderline (129 tokens/page). Math is low (0.057), so the low recognizability is likely broken Hebrew or right-to-left text extraction, not just math fonts split apart. The file is small (74 KB, 117 bytes/token), so it is not a scan. The signals are mixed, and the rule says to default to image.",
+    "source_md5": "730c135dccb940e63463a90bf8adaaa6",
+    "recognizability": 0.6512,
+    "tokens_per_page": 129.0,
+    "bytes_per_token": 117.48,
+    "math_token_fraction": 0.0574,
+    "max_garbage_run_DIAGNOSTIC": 7,
+    "page_count": 5,
+    "file_size_kb": 74
   }
 ]
