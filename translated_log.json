@@ -14205,5 +14205,28 @@
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 5,
     "file_size_kb": 74
+  },
+  {
+    "drive_file_id": "19khi8ZhrD0lDPjFOmxqsqguXd_XYU0cr",
+    "drive_file_name": "שאלות הכנה.pdf",
+    "source_content_hash": "sha256:cc8182051a10753bbe79cf8bed8ea2caace7bc66ba822d6d4ad0e883a5739679",
+    "md_path": "Analog Circuits Lab/Exams/שאלות הכנה_EN.md",
+    "course": "Analog Circuits Lab",
+    "type": "exam",
+    "translated_at": "2026-10-26T12:19:22Z",
+    "model": "subscription:claude-opus-5-5",
+    "cost_usd": 0.255077,
+    "input_tokens": 4,
+    "output_tokens": 4563,
+    "chosen_mode": "text",
+    "mode_reasoning": "Course: מעבדת מעגלים אנלוגיים is mapped to Analog Circuits Lab. Type: exam, taken from the parent folder בוחן כניסה (entry quiz). The file is a set of preparation questions, not a solution, so no skip rule applies. Mode: text. The PDF is typed: recognizability 0.92, and every page reads well and evenly (119–177 tokens, recognizability 0.81–0.96). Math is low (0.06) and sits inline in readable prose (THD, Bode, f0). The unrecognized sample is broken-up typed math, not handwriting. Bytes per token is moderate (352), probably from embedded circuit figures. Flag: figures may be lost in text mode.",
+    "source_md5": "cade2895f390376a26d2a60bd889791c",
+    "recognizability": 0.9162,
+    "tokens_per_page": 155.2,
+    "bytes_per_token": 352.33,
+    "math_token_fraction": 0.0593,
+    "max_garbage_run_DIAGNOSTIC": 5,
+    "page_count": 5,
+    "file_size_kb": 267
   }
 ]
