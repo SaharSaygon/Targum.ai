@@ -1364,3 +1364,52 @@ Fixes:
 - Routing prompt: a text/data file inside a course folder is course material
   (`other` / `Reference`), not a skip-floor case.
 - Tests: `tests/test_non_pdf_sources.py`.
+
+---
+
+## 2026-10-27 — Figure pass: real figure crops in the vault
+
+Until now every figure was alt text only (`![…](not_included)`). The vault had
+3,013 such placeholders in 462 `_EN.md` files, 312 of them text-mode
+"not visible". Exam-pipeline outputs flagged the gap (Linear Systems S2:
+"feedback-junction signs cannot be checked against the figure"; EM cards
+T-016/T-017B/T-018A: "figure not visible"). No page numbers were recorded,
+and the source PDFs live only in Drive.
+
+- `core/figures.py`: after translation, each `](not_included)` placeholder is
+  located on its source page, cropped at 300 DPI and saved to
+  `<Course>/<Type>/_figures/<stem>/pPP-fNN.png` (JPEG when the PNG would exceed
+  400 KB). The placeholder becomes the image, a `*Source p.N:*` caption (the
+  vision alt text, or a fresh caption for text-mode placeholders) and a
+  collapsed `> [!figure]- Labels & data` callout: the Hebrew→English label key
+  and the values read off the figure (approximate values marked). Figures no
+  placeholder covers, and placeholders inside a table cell or sentence, get
+  their details in a `## Figure details` section. Frontmatter gains
+  `drive_file_id`, `source_url` (Drive link), `translation_mode`,
+  `figures_dir` and `figure_count`.
+- LOCATE-FIGURES session (`sdk/sessions.py locate_figures`, skill
+  `skills/locate-figures.md`): structured output with page, a bounding box in
+  thousandths of the page, kind, labels and data. It runs in chunks of 40
+  pages; decorative figures (logos, headers) are not cropped.
+- Wired into `_translate_and_record` for new translations. It is non-fatal: a
+  failure is recorded as `figures.status=failed` and the .md keeps its
+  placeholders. Manifest entries gain `figures: {status, count, unresolved,
+  pass_version, at}`.
+- Idempotent: the pass only consumes `not_included` placeholders, and crop
+  numbering continues after files already on disk.
+- `scripts/backfill_figures.py` for files translated before this (default:
+  the semester-5 courses; `--course`, `--dry-run`, `--limit`, `--force`). It
+  checks the Drive md5 first and backs up each .md to
+  `logs/figure_backups/<run>/` before rewriting it.
+- `translate-shared.md`: placeholders carry the page when known, stay on their
+  own line, and keep the `not_included` target as the hand-off marker. The
+  image-mode prompt line "Do not mark figures as not_included" (which
+  contradicted the skill) was removed.
+- No PyMuPDF: model boxes plus 2 % padding crop cleanly in the pilot.
+- Pilot (Computational Models, 2 files): 81 crops, 8.7 MB, every placeholder
+  placed; 4 locate sessions, about 19k fresh tokens. Finding: the 89-page
+  `סיכום הרצאות מודלים חישוביים` translation covers only pages ~53–89 (it opens
+  with "[page(s) missing]"). The pass put the ~45 figures from the untranslated
+  pages under `## Figure details`. Image-mode translation of long PDFs losing
+  early pages is a separate bug.
+- Tests: `tests/test_figures.py`.

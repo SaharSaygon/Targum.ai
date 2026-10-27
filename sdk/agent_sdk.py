@@ -32,7 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
-from core import config, costs, courses, prepass, vault
+from core import config, costs, courses, figures, prepass, vault
 from core.paths import LOGS_DIR
 from sdk import sessions
 from sdk.prepare import prepare_file
@@ -95,6 +95,32 @@ async def _resolve_new_courses(worklist, model):
     return resolved
 
 
+async def _figure_pass(ctx, target, mode):
+    """Crop and embed the figures of a freshly translated .md (core/figures.py).
+    Non-fatal: a failed pass leaves the .md with its placeholders and is
+    recorded as figures.status=failed, so the backfill can retry it."""
+    if ctx.source_kind == "text":
+        return None
+
+    async def locate(placeholders, source_bytes, source_kind):
+        located, results = await sessions.locate_figures(
+            placeholders, source_bytes, source_kind, ctx.name, CONFIG.model)
+        for r in results:
+            _record_session("figures", r, CONFIG.model)
+        return located, None
+
+    try:
+        record = await figures.run_figure_pass(
+            target, ctx.pdf_bytes, ctx.source_kind, mode, ctx.file_id, locate)
+    except Exception as e:
+        LOG(f"  figures[{ctx.path}] FAILED: {e!r}")
+        return figures.failed_record(e)
+    record.pop("result", None)
+    LOG(f"  figures[{ctx.path}] → {record['status']}: {record['count']} cropped, "
+        f"{record['unresolved']} placeholder(s) left")
+    return record
+
+
 async def _translate_and_record(ctx, decision, summary):
     """Run the TRANSLATE session for a routed file, verify the Write landed,
     record the manifest entry. Returns True when saved."""
@@ -120,6 +146,8 @@ async def _translate_and_record(ctx, decision, summary):
         raise RuntimeError(
             f"translate session reported SAVED but {target} is missing/empty")
 
+    figures_record = await _figure_pass(ctx, target, mode)
+
     usage = result.usage or {}
     vault.record_translation(
         drive_file_id=ctx.file_id,
@@ -140,6 +168,7 @@ async def _translate_and_record(ctx, decision, summary):
         detection_signals=ctx.signals,
         source_md5=ctx.drive_md5,
         source_modified_time=ctx.modified_time if ctx.drive_md5 is None else None,
+        figures=figures_record,
     )
     LOG(f"  SAVED: {ctx.path} → {target.relative_to(vault_path)} ({mode})")
     summary["saved"].append((ctx.name, str(target.relative_to(vault_path))))

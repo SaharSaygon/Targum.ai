@@ -41,6 +41,12 @@ def image_system_prompt() -> str:
     return load_skill("translate-shared.md") + "\n\n" + load_skill("translate-image-pdf.md")
 
 
+def locate_figures_system_prompt() -> str:
+    """The figure pass's locate session: its own skill only (it doesn't
+    translate, so none of the translation skills apply)."""
+    return load_skill("locate-figures.md")
+
+
 # Maps the semantic type value to the subfolder name inside the course folder:
 # "lecture" → <vault>/<course>/Lectures/<file>_EN.md, etc. "reference" maps to
 # "" and lands directly in the course root.
@@ -168,6 +174,7 @@ def record_translation(
     detection_signals: dict | None = None,
     source_md5: str | None = None,
     source_modified_time: str | None = None,
+    figures: dict | None = None,
 ) -> dict:
     """Upsert a translated-file manifest entry. The single owner of the entry
     schema — used by save_to_vault (legacy path, which also writes the .md) and
@@ -201,9 +208,26 @@ def record_translation(
         entry["source_modified_time"] = source_modified_time
     if detection_signals is not None:
         entry.update(detection_signals)
+    # The figure pass's outcome (core/figures.py): status, crop count,
+    # placeholders left, pass_version. Absent for text sources.
+    if figures is not None:
+        entry["figures"] = figures
 
     entries = manifest.load_log()
     entries = manifest.upsert_entry(entries, entry)
+    manifest.save_log(entries)
+    return entry
+
+
+def record_figures(drive_file_id: str, figures: dict) -> dict | None:
+    """Set the `figures` record on an existing translated entry (the backfill
+    path — the translation itself is unchanged). Returns the entry, or None
+    when no entry has this drive_file_id."""
+    entries = manifest.load_log()
+    entry = manifest.find_by_id(entries, drive_file_id)
+    if entry is None:
+        return None
+    entry["figures"] = figures
     manifest.save_log(entries)
     return entry
 

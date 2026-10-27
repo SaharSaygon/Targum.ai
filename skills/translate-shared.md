@@ -90,12 +90,13 @@ Fenced code blocks for code.
 
 Figures:
 Never skip a figure reference, but never fabricate what you cannot see.
+Every figure becomes one placeholder on a line of its own, in the place it appears in the source. `not_included` is the hand-off marker: after translation, a separate figure pass finds each placeholder's figure on the source page, crops it into the vault and replaces the placeholder with the image, so always use exactly `](not_included)` as the target. Number figures as the source numbers them (Figure N); for an unnumbered figure write "Figure:". When you know the source page, add it as (p.P) — it helps the figure pass find the right figure.
 - If you can see the figure (image-mode / vision input): write descriptive alt text — axes, shapes, labels, what it illustrates conceptually. Example:
-  ![Figure N: E(k) dispersion with two bands, upper band peaks at k=0](not_included)
+  ![Figure N (p.P): E(k) dispersion with two bands, upper band peaks at k=0](not_included)
 - If you cannot see the figure (text-extraction mode, figure referenced in surrounding text but not visible to you): mark it explicitly. Example:
   ![Figure N: not visible — text extraction only. Original referenced as "<verbatim caption from source if any>"](not_included)
   Do not invent a description. Do not infer figure content from the surrounding text. Do not guess what a typical figure on this topic would show.
-Be descriptive only when you can actually see the figure. "[Figure 3]" alone is not enough — always use the markdown image syntax with one of the two patterns above.
+Be descriptive only when you can actually see the figure. "[Figure 3]" alone is not enough — always use the markdown image syntax with one of the two patterns above. Do not put a placeholder inside a table cell or mid-sentence.
 
 Required Closing Sections:
 ## Glossary — two-column Markdown table of key Hebrew–English term pairs from this file.

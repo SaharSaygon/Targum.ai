@@ -34,7 +34,12 @@ from claude_agent_sdk import (
 
 from core.paths import ROUTING_PROMPT_PATH
 from core.pdf_images import DPI, render_image_base64, render_pdf_pages_base64
-from core.vault import TYPE_TO_FOLDER, image_system_prompt, text_system_prompt
+from core.vault import (
+    TYPE_TO_FOLDER,
+    image_system_prompt,
+    locate_figures_system_prompt,
+    text_system_prompt,
+)
 
 # ── Structured-output schemas ─────────────────────────────────────────────────
 
@@ -328,8 +333,7 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
                 "Translate the following Hebrew lecture per the system prompt.\n\n"
                 f"Source mode: vision (page images at {DPI} DPI). "
                 "Describe figures, diagrams, and handwritten content directly "
-                "from what you see. Do not mark figures as not_included — "
-                "you can see them.\n\n"
+                "from what you see.\n\n"
                 f"Course: {course_english}\n"
                 f"Source file: {ctx.name}\n\n"
                 f"{review}"
@@ -369,6 +373,115 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
     if final_text.startswith("REFUSED:"):
         return f"refused: {final_text[len('REFUSED:'):].strip()}", result
     return "saved", result
+
+
+# ── LOCATE-FIGURES session (the figure pass, core/figures.py) ─────────────────
+
+_FIGURE_ENTRY = {
+    "type": "object",
+    "properties": {
+        "index": {"type": ["integer", "null"],
+                  "description": "Placeholder number; null for a figure no placeholder covers."},
+        "page": {"type": "integer", "description": "1-based page number from its 'Page N' label."},
+        "bbox": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4,
+                 "description": "[x0, y0, x1, y1] in thousandths of page width/height, origin top-left."},
+        "kind": {"type": "string", "enum": [
+            "circuit", "plot", "geometry", "block_diagram", "table_image",
+            "photo", "handwritten_sketch", "decorative"]},
+        "caption_en": {"type": ["string", "null"]},
+        "labels": {"type": "array", "items": {
+            "type": "object",
+            "properties": {"he": {"type": "string"}, "en": {"type": "string"}},
+            "required": ["he", "en"],
+        }},
+        "data": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["index", "page", "bbox", "kind", "caption_en", "labels", "data"],
+}
+
+LOCATE_FIGURES_SCHEMA = {
+    "type": "json_schema",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "figures": {"type": "array", "items": _FIGURE_ENTRY},
+            "not_found": {"type": "array", "items": {"type": "integer"}},
+        },
+        "required": ["figures", "not_found"],
+    },
+}
+
+# Pages per locate session. Long lectures are split into chunks, each shown
+# the full placeholder list; a placeholder is claimed by the first chunk that
+# finds its figure.
+LOCATE_PAGES_PER_CALL = 40
+
+# Alt texts can run to 1600+ characters; the start is enough to match on.
+_ALT_PREVIEW_CHARS = 400
+
+
+def _placeholder_list(placeholders) -> str:
+    lines = []
+    for p in placeholders:
+        alt = " ".join(p.alt.split())
+        if len(alt) > _ALT_PREVIEW_CHARS:
+            alt = alt[:_ALT_PREVIEW_CHARS] + "…"
+        heading = f' (under heading "{p.heading}")' if p.heading else ""
+        lines.append(f"[{p.index}]{heading} {alt}")
+    return "\n".join(lines)
+
+
+async def locate_figures(placeholders, source_bytes: bytes, source_kind: str,
+                         source_name: str, model: str):
+    """Run the LOCATE-FIGURES session(s) for one file. Returns
+    ({"figures": [...], "not_found": [...]}, [ResultMessage, ...]) — one result
+    per page chunk, for the caller's ledger."""
+    if source_kind == "image":
+        pages = render_image_base64(source_bytes)
+    else:
+        pages = [("image/png", b64) for b64 in render_pdf_pages_base64(source_bytes)]
+
+    listing = _placeholder_list(placeholders)
+    claimed, extra, results = {}, [], []
+    for start in range(0, len(pages), LOCATE_PAGES_PER_CALL):
+        chunk = pages[start:start + LOCATE_PAGES_PER_CALL]
+        shown = f"pages {start + 1}–{start + len(chunk)} of {len(pages)}"
+        content = [{"type": "text", "text": (
+            f"Source file: {source_name}\n"
+            f"You are shown {shown}.\n\n"
+            f"Figure placeholders in the translation:\n{listing}"
+        )}]
+        for i, (media_type, b64) in enumerate(chunk, start=start + 1):
+            content.append({"type": "text", "text": f"Page {i}"})
+            content.append({"type": "image", "source": {
+                "type": "base64", "media_type": media_type, "data": b64}})
+
+        async def _prompt_stream(content=content):
+            yield {"type": "user", "message": {"role": "user", "content": content}}
+
+        options = ClaudeAgentOptions(
+            system_prompt=locate_figures_system_prompt(),
+            model=model,
+            tools=[],
+            permission_mode="dontAsk",
+            max_turns=3,
+            output_format=LOCATE_FIGURES_SCHEMA,
+        )
+        result = await _run(options, _prompt_stream())
+        results.append(result)
+        out = result.structured_output
+        if not isinstance(out, dict) or "figures" not in out:
+            raise RuntimeError(f"locate session returned no usable output: {result.result!r}")
+        for fig in out["figures"]:
+            idx = fig.get("index")
+            if idx is None:
+                extra.append(fig)
+            elif idx not in claimed:
+                claimed[idx] = fig
+
+    figures = sorted(claimed.values(), key=lambda f: f["index"]) + extra
+    not_found = [p.index for p in placeholders if p.index not in claimed]
+    return {"figures": figures, "not_found": not_found}, results
 
 
 # ── Course-naming session (upfront, before the fan-out) ───────────────────────

@@ -344,7 +344,11 @@ agent loop's own system prompt is the separate `agent_routing_prompt.md`.
   once manually as the md5 backfill.
 - **No hybrid PDF mode.** A file is translated wholly in text **or** image mode; a
   per-page hybrid path does not exist (the skills describe "hybrid" as a
-  translator judgment within one mode, not a separate engine).
+  translator judgment within one mode, not a separate engine). Figures are the
+  exception: after either mode, the figure pass (`core/figures.py`, LOCATE-FIGURES
+  session) renders the pages, crops every figure into
+  `<Type>/_figures/<stem>/` and replaces the `not_included` placeholders, so
+  text-mode files get figures too. See HISTORY 2026-10-27.
 - **The 404 orphan.** STATUS/PHASE2_NOTES/HISTORY record **one** manifest entry
   whose Drive source has 404'd, found during the md5 backfill and left in place as
   harmless. It carries **no** structural marker (no `404`/`orphan`/`missing`

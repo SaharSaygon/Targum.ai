@@ -13997,7 +13997,14 @@
     "math_token_fraction": 0.0054,
     "max_garbage_run_DIAGNOSTIC": 18,
     "page_count": 37,
-    "file_size_kb": 2226
+    "file_size_kb": 2226,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:02:28Z",
+      "count": 2,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "10LoEul2PZxc85KxShPb7p3Z9eZuKPG6P",
@@ -14020,7 +14027,14 @@
     "math_token_fraction": 0.0138,
     "max_garbage_run_DIAGNOSTIC": 74,
     "page_count": 89,
-    "file_size_kb": 3461
+    "file_size_kb": 3461,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:05:24Z",
+      "count": 79,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1JQhrsjrFisxJHMoIhM_s5eFmewB03bum",
@@ -14066,7 +14080,14 @@
     "math_token_fraction": 0.0089,
     "max_garbage_run_DIAGNOSTIC": 26,
     "page_count": 36,
-    "file_size_kb": 859
+    "file_size_kb": 859,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:15:34Z",
+      "count": 7,
+      "unresolved": 4
+    }
   },
   {
     "drive_file_id": "1TBI2nXd9QZWONT-sgzjqXuhwN7-9vWHY",
@@ -14089,7 +14110,14 @@
     "math_token_fraction": 0.0106,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 2,
-    "file_size_kb": 157
+    "file_size_kb": 157,
+    "figures": {
+      "status": "none",
+      "pass_version": 1,
+      "at": "2026-10-27T12:14:52Z",
+      "count": 0,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1vrLGkuvINm8RQJqiehoEm9cVvnjO75d-",
@@ -14112,7 +14140,14 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 3,
     "page_count": 28,
-    "file_size_kb": 2612
+    "file_size_kb": 2612,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:16:18Z",
+      "count": 18,
+      "unresolved": 1
+    }
   },
   {
     "drive_file_id": "1CVigUHe8nHTGaqKvoYLD0xct7GyDj0St",
@@ -14135,7 +14170,14 @@
     "math_token_fraction": 0.005,
     "max_garbage_run_DIAGNOSTIC": 26,
     "page_count": 4,
-    "file_size_kb": 493
+    "file_size_kb": 493,
+    "figures": {
+      "status": "none",
+      "pass_version": 1,
+      "at": "2026-10-27T12:15:35Z",
+      "count": 0,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1N5Q2luu4NhutLtcNRHbCs3TMddqSN4ZG",
@@ -14181,7 +14223,14 @@
     "math_token_fraction": 0.0188,
     "max_garbage_run_DIAGNOSTIC": 23,
     "page_count": 72,
-    "file_size_kb": 8737
+    "file_size_kb": 8737,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:17:56Z",
+      "count": 34,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1xR1ngEdriwSi4LUjjrO927gn4MM5uEhx",
@@ -14204,7 +14253,14 @@
     "math_token_fraction": 0.0574,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 5,
-    "file_size_kb": 74
+    "file_size_kb": 74,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:16:57Z",
+      "count": 28,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "19khi8ZhrD0lDPjFOmxqsqguXd_XYU0cr",
@@ -14227,7 +14283,14 @@
     "math_token_fraction": 0.0593,
     "max_garbage_run_DIAGNOSTIC": 5,
     "page_count": 5,
-    "file_size_kb": 267
+    "file_size_kb": 267,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:17:30Z",
+      "count": 13,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1B4qKrz4zaSBqrj_Lpb2WUHEq5GHMoyxs",
@@ -14250,7 +14313,14 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 6,
     "page_count": 5,
-    "file_size_kb": 903
+    "file_size_kb": 903,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:17:57Z",
+      "count": 7,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1lCMpvCrkAn6lzeFOpi-jw_L3juD3d9gx",
@@ -14273,7 +14343,14 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 6,
-    "file_size_kb": 731
+    "file_size_kb": 731,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:18:50Z",
+      "count": 26,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1XCmkDRN_QPcu9Y8NVyNSYnsc7gZe70PE",
@@ -14296,7 +14373,14 @@
     "math_token_fraction": 0.0502,
     "max_garbage_run_DIAGNOSTIC": 11,
     "page_count": 26,
-    "file_size_kb": 457
+    "file_size_kb": 457,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:18:49Z",
+      "count": 17,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1UxlOKw2xUP_2V-kVuBKcEsNBqv86SWDX",
@@ -14319,7 +14403,14 @@
     "math_token_fraction": 0.043,
     "max_garbage_run_DIAGNOSTIC": 18,
     "page_count": 19,
-    "file_size_kb": 681
+    "file_size_kb": 681,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:19:33Z",
+      "count": 15,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1HP97HqGVl1d1DJ2Ursuf3asK7gU-5bYd",
@@ -14342,7 +14433,14 @@
     "math_token_fraction": 0.0083,
     "max_garbage_run_DIAGNOSTIC": 6,
     "page_count": 4,
-    "file_size_kb": 423
+    "file_size_kb": 423,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:19:07Z",
+      "count": 4,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1ab9rDZ81R2vB5rlVeeP8pcVm7QvjigGz",
@@ -14365,7 +14463,14 @@
     "math_token_fraction": 0.0386,
     "max_garbage_run_DIAGNOSTIC": 17,
     "page_count": 23,
-    "file_size_kb": 625
+    "file_size_kb": 625,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:20:04Z",
+      "count": 25,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1hHMx3bNVR2mTz16tLChnWUHn375XJtCm",
@@ -14388,7 +14493,14 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 7,
     "page_count": 5,
-    "file_size_kb": 786
+    "file_size_kb": 786,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:19:55Z",
+      "count": 4,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1toWajjzNIzJrAz6JhApRWPHjWPYckhOW",
@@ -14411,7 +14523,14 @@
     "math_token_fraction": 0.0015,
     "max_garbage_run_DIAGNOSTIC": 4,
     "page_count": 3,
-    "file_size_kb": 409
+    "file_size_kb": 409,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:20:22Z",
+      "count": 4,
+      "unresolved": 0
+    }
   },
   {
     "drive_file_id": "1rcr9h1kaegDp3fIcNVVWWITWNYqHcQdM",
@@ -14434,7 +14553,14 @@
     "math_token_fraction": 0.0195,
     "max_garbage_run_DIAGNOSTIC": 8,
     "page_count": 25,
-    "file_size_kb": 1298
+    "file_size_kb": 1298,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:20:55Z",
+      "count": 27,
+      "unresolved": 3
+    }
   },
   {
     "drive_file_id": "1irHscg7j73g7OJbeZVzC_oaQriSFrN3e",
@@ -14457,6 +14583,13 @@
     "math_token_fraction": 0.0,
     "max_garbage_run_DIAGNOSTIC": 0,
     "page_count": 6,
-    "file_size_kb": 637
+    "file_size_kb": 637,
+    "figures": {
+      "status": "done",
+      "pass_version": 1,
+      "at": "2026-10-27T12:21:08Z",
+      "count": 20,
+      "unresolved": 1
+    }
   }
 ]
