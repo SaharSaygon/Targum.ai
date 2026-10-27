@@ -33,7 +33,7 @@ from claude_agent_sdk import (
 )
 
 from core.paths import ROUTING_PROMPT_PATH
-from core.pdf_images import DPI, render_pdf_pages_base64
+from core.pdf_images import DPI, render_image_base64, render_pdf_pages_base64
 from core.vault import TYPE_TO_FOLDER, image_system_prompt, text_system_prompt
 
 # ── Structured-output schemas ─────────────────────────────────────────────────
@@ -152,6 +152,17 @@ def _signals_server(ctx):
 
 # ── ROUTE session ─────────────────────────────────────────────────────────────
 
+_TEXT_PREVIEW_CHARS = 1500
+
+_SOURCE_FORMAT_LINE = {
+    "pdf": "pdf",
+    "image": "image (a single photographed/scanned page, not a PDF) — only "
+             "mode=image is possible",
+    "text": "text (a plain-text/CSV file, not a PDF) — only mode=text is "
+            "possible; its opening content is shown below",
+}
+
+
 def _route_prompt(ctx, courses_block: str, extra_context: str | None) -> str:
     parts = [
         "You are routing ONE file from the deterministic pre-pass worklist. "
@@ -164,7 +175,8 @@ def _route_prompt(ctx, courses_block: str, extra_context: str | None) -> str:
         "translate_*, save_to_vault, update_mapping, or skip_file — those do "
         "not exist here; translation and recording happen elsewhere based on "
         "your structured decision.",
-        f"## File\npath: {ctx.path}\nfilename: {ctx.name}\nfile_id: {ctx.file_id}",
+        f"## File\npath: {ctx.path}\nfilename: {ctx.name}\nfile_id: {ctx.file_id}\n"
+        f"source_format: {_SOURCE_FORMAT_LINE[ctx.source_kind]}",
         f"## Extraction signals\n"
         f"page_count: {ctx.signals['page_count']}\n"
         f"file_size_kb: {ctx.signals['file_size_kb']}\n"
@@ -177,6 +189,9 @@ def _route_prompt(ctx, courses_block: str, extra_context: str | None) -> str:
         "are genuinely ambiguous.)",
         f"## Approved course mappings (from courses.json)\n{courses_block}",
     ]
+    if ctx.source_kind == "text":
+        preview = (ctx.source_text or "")[:_TEXT_PREVIEW_CHARS]
+        parts.insert(2, f"## Content preview (first {_TEXT_PREVIEW_CHARS} chars)\n{preview}")
     if extra_context:
         parts.append(f"## Additional context from a previous attempt\n{extra_context}")
     parts.append(
@@ -277,16 +292,26 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
     review = f"{UNOFFICIAL_SOLUTION_INSTRUCTION}\n\n" if unofficial_solution else ""
 
     if mode == "text":
-        try:
-            extracted = extract_pdf_text(ctx.pdf_bytes)
-        except RuntimeError as e:
-            return f"text_extraction_failed: {e}", None
+        if ctx.source_kind == "text":
+            extracted = (ctx.source_text or "").strip()
+            if not extracted:
+                return "text_extraction_failed: text source is empty", None
+            fmt_note = ("Source format: a plain-text/CSV file, not a lecture. "
+                        "Keep its structure — render tabular data as a "
+                        "markdown table.\n\n")
+        else:
+            try:
+                extracted = extract_pdf_text(ctx.pdf_bytes)
+            except RuntimeError as e:
+                return f"text_extraction_failed: {e}", None
+            fmt_note = ""
         system = text_system_prompt()
         content = [{
             "type": "text",
             "text": (
                 f"Today's date is {today_date}. "
                 "Translate the following Hebrew lecture per the system prompt.\n\n"
+                f"{fmt_note}"
                 f"Course: {course_english}\n"
                 f"Source file: {ctx.name}\n\n"
                 f"{extracted}\n\n"
@@ -311,10 +336,14 @@ async def translate_file(ctx, mode: str, course_english: str, target: Path,
                 f"{_write_instruction(target)}"
             ),
         }]
-        for page_b64 in render_pdf_pages_base64(ctx.pdf_bytes):
+        if ctx.source_kind == "image":
+            pages = render_image_base64(ctx.pdf_bytes)
+        else:
+            pages = [("image/png", b64) for b64 in render_pdf_pages_base64(ctx.pdf_bytes)]
+        for media_type, page_b64 in pages:
             content.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": "image/png", "data": page_b64},
+                "source": {"type": "base64", "media_type": media_type, "data": page_b64},
             })
 
     async def _prompt_stream():

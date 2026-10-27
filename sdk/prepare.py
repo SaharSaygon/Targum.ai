@@ -8,10 +8,13 @@ the route session receives ready-made signals and file bytes never enter any
 model context they don't belong in.
 """
 
+import io
 from dataclasses import dataclass, field
 
+from PIL import Image
+
 from core import dedup, drive, manifest
-from core.pdf_mode_detector import detect_pdf_mode
+from core.pdf_mode_detector import _analyze_text, detect_pdf_mode
 
 _SCALAR_SIGNAL_KEYS = (
     "recognizability",
@@ -37,10 +40,54 @@ class FileContext:
     signals: dict               # scalar signals (the route session's evidence)
     signals_full: dict = field(repr=False, default_factory=dict)  # per_page + unrecognized_sample
     modified_time: str | None = None  # Drive modifiedTime — freshness signal when md5 is None
+    # What pdf_bytes actually holds: "pdf" | "image" (one photographed page,
+    # e.g. a JPG) | "text" (CSV/TXT…, decoded into source_text). Image and text
+    # sources each have exactly one possible mode.
+    source_kind: str = "pdf"
+    source_text: str | None = None
 
     @property
     def path(self) -> str:
         return "/".join(self.parent_path + [self.name])
+
+
+def sniff_source_kind(data: bytes) -> str:
+    """Classify downloaded bytes by content, not by name or Drive mimeType
+    (native Google files export to PDF, so the bytes are the ground truth).
+    Unknown binary falls through to "pdf": the PDF path reports zero yield and
+    fails visibly, as it did before non-PDF support existed."""
+    if b"%PDF-" in data[:1024]:
+        return "pdf"
+    try:
+        Image.open(io.BytesIO(data)).verify()
+        return "image"
+    except Exception:
+        pass
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return "pdf"
+    return "text" if "\x00" not in text else "pdf"
+
+
+def _single_page_signals(size_bytes: int, text: str) -> dict:
+    """Detector-shaped signals for a one-page non-PDF source. An image has no
+    text layer (zero yield, like a scanned PDF); a text file is all yield."""
+    a = _analyze_text(text)
+    tokens = a["total_tokens"]
+    return {
+        "recognizability": a["recognizability"],
+        "tokens_per_page": float(tokens),
+        "bytes_per_token": round(size_bytes / max(tokens, 1), 2),
+        "math_token_fraction": a["math_token_fraction"],
+        "unrecognized_sample": a["unrecognized_sample"],
+        "per_page": [{"page": 1, "tokens": tokens,
+                      "recognizability": a["recognizability"],
+                      "math_fraction": a["math_token_fraction"]}],
+        "max_garbage_run_DIAGNOSTIC": a["max_garbage_run_DIAGNOSTIC"],
+        "page_count": 1,
+        "file_size_kb": size_bytes // 1024,
+    }
 
 
 def _refresh_modified_time(entries, file_id, modified_time):
@@ -103,8 +150,14 @@ def prepare_file(item: dict) -> dict:
         return verdict
 
     # 4. extraction signals — the route session's text-vs-image evidence.
+    source_kind = sniff_source_kind(pdf_bytes)
+    source_text = (pdf_bytes.decode("utf-8-sig") if source_kind == "text"
+                   else None)
     try:
-        raw_signals = detect_pdf_mode(pdf_bytes)
+        if source_kind == "pdf":
+            raw_signals = detect_pdf_mode(pdf_bytes)
+        else:
+            raw_signals = _single_page_signals(len(pdf_bytes), source_text or "")
     except Exception as e:
         return {"status": "error", "reason": f"detector failed: {e}"}
 
@@ -121,5 +174,7 @@ def prepare_file(item: dict) -> dict:
             "per_page":            raw_signals["per_page"],
             "unrecognized_sample": raw_signals["unrecognized_sample"],
         },
+        source_kind=source_kind,
+        source_text=source_text,
     )
     return {"status": "ready", "ctx": ctx}

@@ -211,6 +211,13 @@ async def _process_file_once(item, path, summary):
                    if not decision.get(k)]
         if missing:
             raise RuntimeError(f"translate decision missing {missing}: {decision}")
+        # Image and text sources have exactly one usable mode; a route
+        # decision for the other would only fail in the translate session.
+        forced = {"image": "image", "text": "text"}.get(ctx.source_kind)
+        if forced and decision["mode"] != forced:
+            LOG(f"  mode[{path}]: {decision['mode']} → {forced} "
+                f"(source is {ctx.source_kind})")
+            decision["mode"] = forced
         outcome = await _translate_and_record(ctx, decision, summary)
         if outcome == "saved":
             return

@@ -9,7 +9,7 @@ import base64
 import io
 
 from pdf2image import convert_from_bytes
-from PIL import Image
+from PIL import Image, ImageOps
 
 # 200 DPI is the sweet spot for handwritten Hebrew:
 # - Low enough that a 10-page scan fits in Claude's context window
@@ -69,3 +69,21 @@ def render_pdf_pages_base64(pdf_bytes: bytes, dpi: int = DPI) -> list[str]:
         pages.append(pil_to_base64_png(downscale(img)))
     print()  # the \r above overwrites the same terminal line; this moves past it
     return pages
+
+
+def render_image_base64(image_bytes: bytes) -> list[tuple[str, str]]:
+    """Encode a standalone image file (a phone photo of one page) as a single
+    page, through the same downscale cap as rasterised PDF pages. Returns
+    [(media_type, base64)].
+
+    exif_transpose applies the camera's rotation tag — without it a page shot
+    in portrait reaches the model on its side. JPEG, not PNG: a downscaled
+    photo is noisy and compresses badly as PNG (several MB, near the API's 5 MB
+    per-image limit), while a PDF raster page is mostly white and stays small.
+    """
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes)))
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    buf = io.BytesIO()
+    downscale(img).save(buf, format="JPEG", quality=90)
+    return [("image/jpeg", base64.b64encode(buf.getvalue()).decode("utf-8"))]

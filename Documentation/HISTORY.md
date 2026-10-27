@@ -1336,3 +1336,31 @@ Fixes:
   unaffected (name-blind when omitted).
 - Manifest: the two wrongly recorded skip-floor entries were removed.
 - Tests: `tests/test_skip_floor_and_rename.py`.
+
+---
+
+## 2026-10-03 — Non-PDF sources: photographed pages and CSV/text files
+
+Run `20261003_121021` finished DEGRADED: 17 page photos
+(`תרגילים פתורים טניה/Danov_*_pNN.JPG`) were routed to image mode and every
+one crashed in `pdf2image` (`PDFPageCountError`: the pipeline assumed every
+Drive file is a PDF). The errors were counted as transient, so each run would
+re-route all 17 (two route sessions per file) and fail again. The folder's
+`rename_log.csv` was skip-floored, which is run-log only, so it came back every run.
+
+Fixes:
+
+- `sdk/prepare.py` sniffs the downloaded bytes (`sniff_source_kind`: pdf /
+  image / text) and stores it on `FileContext.source_kind`. Image and text
+  sources get detector-shaped one-page signals.
+- Image sources: `core/pdf_images.render_image_base64` applies the EXIF
+  rotation, downscales to `MAX_EDGE_PX`, and sends the page as JPEG (a photo
+  saved as PNG is several MB, close to the 5 MB per-image limit). Each JPG is
+  its own translation (one page per output); pages are not stitched together.
+- Text sources: translated from the decoded text. The route prompt shows a
+  `source_format` line and a 1500-char preview.
+- The orchestrator forces the mode to match the source (image → image, text →
+  text).
+- Routing prompt: a text/data file inside a course folder is course material
+  (`other` / `Reference`), not a skip-floor case.
+- Tests: `tests/test_non_pdf_sources.py`.
